@@ -139,6 +139,31 @@ function ContractionTimer() {
     })();
   }, []);
 
+  /* cross-tab sync: if another tab (or the same one, reopened) writes new
+     timings, pick them up here so open tabs stay consistent and a stale tab
+     can't clobber newer data. Fires only for changes made in *other* tabs. */
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== KEY) return;
+      try {
+        if (e.newValue == null) {
+          // erased in another tab
+          setItems([]);
+          setActiveStart(null);
+          return;
+        }
+        const d = JSON.parse(e.newValue);
+        setItems(Array.isArray(d.items) ? d.items : []);
+        setActiveStart(d.activeStart ?? null);
+        if (d.targetMin === 3 || d.targetMin === 5) setTargetMin(d.targetMin);
+      } catch {
+        /* ignore a malformed cross-tab write */
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   /* clock */
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 500);

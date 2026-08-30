@@ -25,7 +25,16 @@
   <!--
     Storage shim: the original app targeted the Claude artifact runtime, which
     exposes an async window.storage API. On a plain web page we back it with
-    localStorage so timings survive reloads. Everything stays on-device.
+    localStorage, which:
+      - has no expiry, so timings persist for days/weeks (well past 5 days),
+      - is shared across tabs of this origin, so reopening in a new tab or
+        coming back later restores the same data.
+    Everything stays on-device — nothing is sent anywhere.
+
+    We also ask the browser to mark this origin's storage "persistent" so it is
+    exempt from being cleared under storage pressure. This is best-effort: it
+    may be granted silently, prompt, or be unavailable — either way the data
+    still lives in localStorage.
   -->
   <script>
     (function () {
@@ -49,6 +58,17 @@
           return Promise.resolve();
         },
       };
+
+      // Best-effort: keep this origin's storage from being evicted.
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persisted().then(function (already) {
+            if (!already) navigator.storage.persist();
+          }).catch(function () {});
+        }
+      } catch (e) {
+        /* API unavailable — localStorage still persists on its own */
+      }
     })();
   </script>
 
