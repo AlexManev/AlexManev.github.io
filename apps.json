@@ -1,0 +1,18 @@
+{
+  "profile": {
+    "name": "Alex Manev",
+    "tagline": "A home for my web apps, experiments, and projects.",
+    "links": [
+      { "label": "GitHub", "url": "https://github.com/AlexManev" }
+    ]
+  },
+  "apps": [
+    {
+      "title": "Hello World",
+      "description": "A minimal example app to show how a subpage is wired up. Copy this folder to start a new one.",
+      "path": "apps/hello-world/",
+      "tags": ["demo", "example"],
+      "emoji": "👋"
+    }
+  ]
+}
