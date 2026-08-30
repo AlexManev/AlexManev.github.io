@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Contraction Timer</title>
+  <meta name="description" content="A calm, private contraction timer that tracks length, spacing, and pattern — all on your device." />
+  <meta name="theme-color" content="#12111a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A4%B0%3C/text%3E%3C/svg%3E" />
+  <style>
+    html, body, #root { height: 100%; }
+    html { background: #12111a; }
+    body { margin: 0; background: #12111a; }
+    #boot {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      color: #8f8a9e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px; letter-spacing: .04em;
+    }
+  </style>
+</head>
+<body>
+  <div id="boot">Loading…</div>
+  <div id="root"></div>
+
+  <!--
+    Storage shim: the original app targeted the Claude artifact runtime, which
+    exposes an async window.storage API. On a plain web page we back it with
+    localStorage, which:
+      - has no expiry, so timings persist for days/weeks (well past 5 days),
+      - is shared across tabs of this origin, so reopening in a new tab or
+        coming back later restores the same data.
+    Everything stays on-device — nothing is sent anywhere.
+
+    We also ask the browser to mark this origin's storage "persistent" so it is
+    exempt from being cleared under storage pressure. This is best-effort: it
+    may be granted silently, prompt, or be unavailable — either way the data
+    still lives in localStorage.
+  -->
+  <script>
+    (function () {
+      var mem = {};
+      window.storage = {
+        get: function (key) {
+          try {
+            var v = localStorage.getItem(key);
+            if (v == null) v = key in mem ? mem[key] : null;
+            return Promise.resolve(v == null ? null : { value: v });
+          } catch (e) {
+            return Promise.resolve(key in mem ? { value: mem[key] } : null);
+          }
+        },
+        set: function (key, value) {
+          try {
+            localStorage.setItem(key, value);
+          } catch (e) {
+            mem[key] = value;
+          }
+          return Promise.resolve();
+        },
+      };
+
+      // Best-effort: keep this origin's storage from being evicted.
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persisted().then(function (already) {
+            if (!already) navigator.storage.persist();
+          }).catch(function () {});
+        }
+      } catch (e) {
+        /* API unavailable — localStorage still persists on its own */
+      }
+    })();
+  </script>
+
+  <!-- Vendored locally: no CDN, works offline, no external dependency. -->
+  <script src="vendor/react.production.min.js"></script>
+  <script src="vendor/react-dom.production.min.js"></script>
+  <!-- Component, pre-transpiled from app.src.jsx (see build note in that file). -->
+  <script src="app.js"></script>
+</body>
+</html>

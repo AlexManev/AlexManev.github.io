@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alex Manev</title>
+  <meta name="description" content="A home for my web apps, experiments, and projects." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-hover: #ffffff;
+      --border: #e4e7eb;
+      --text: #1a1d23;
+      --muted: #6b7280;
+      --accent: #4f46e5;
+      --accent-soft: #eef2ff;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 16px rgba(16, 24, 40, 0.06);
+      --shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.08), 0 12px 28px rgba(16, 24, 40, 0.12);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1017;
+        --surface: #161a22;
+        --surface-hover: #1c212b;
+        --border: #262c38;
+        --text: #e6e9ef;
+        --muted: #9aa3b2;
+        --accent: #8b8cf6;
+        --accent-soft: #1e2130;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+        --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.45);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    header {
+      padding: 72px 0 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      letter-spacing: -0.02em;
+    }
+    header p.tagline {
+      margin: 0 0 20px;
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 42ch;
+    }
+    .profile-links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .profile-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .profile-links a:hover { background: var(--accent-soft); border-color: var(--accent); transform: translateY(-1px); }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 48px 0 20px;
+    }
+    .section-head h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; }
+    .count { font-size: 0.85rem; color: var(--muted); }
+
+    .search {
+      width: 100%;
+      padding: 11px 16px;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .search::placeholder { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--accent);
+      background: var(--surface-hover);
+    }
+    .card .emoji {
+      font-size: 1.75rem;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+    .card p { margin: 0 0 14px; font-size: 0.9rem; color: var(--muted); flex: 1; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 999px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .card .arrow {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .empty, .error {
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+    }
+    .error code {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.85em;
+    }
+
+    footer {
+      margin: 64px 0 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="name">Alex Manev</h1>
+      <p class="tagline" id="tagline">A home for my web apps, experiments, and projects.</p>
+      <nav class="profile-links" id="profile-links"></nav>
+    </header>
+
+    <main>
+      <div class="section-head">
+        <h2>Apps &amp; Pages</h2>
+        <span class="count" id="count"></span>
+      </div>
+      <input type="search" class="search" id="search" placeholder="Search apps…" aria-label="Search apps" />
+      <div class="grid" id="grid"></div>
+    </main>
+
+    <footer>
+      Built with a static index &middot; add new apps by editing
+      <a href="https://github.com/AlexManev/AlexManev.github.io/blob/main/apps.json"><code style="all:unset;font-family:monospace;">apps.json</code></a>
+    </footer>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const searchEl = document.getElementById('search');
+    const countEl = document.getElementById('count');
+    let apps = [];
+
+    function render(list) {
+      grid.innerHTML = '';
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty">No apps match your search.</div>';
+        return;
+      }
+      for (const app of list) {
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = app.path;
+        const tags = (app.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+        a.innerHTML = `
+          ${app.emoji ? `<div class="emoji">${escapeHtml(app.emoji)}</div>` : ''}
+          <h3>${escapeHtml(app.title || app.path)}</h3>
+          <p>${escapeHtml(app.description || '')}</p>
+          <div class="tags">${tags}</div>
+          <div class="arrow">Open &rarr;</div>
+        `;
+        grid.appendChild(a);
+      }
+    }
+
+    function applyFilter() {
+      const q = searchEl.value.trim().toLowerCase();
+      if (!q) { render(apps); return; }
+      const filtered = apps.filter(app => {
+        const hay = [app.title, app.description, ...(app.tags || [])].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+      render(filtered);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function renderProfile(profile) {
+      if (!profile) return;
+      if (profile.name) { document.getElementById('name').textContent = profile.name; document.title = profile.name; }
+      if (profile.tagline) document.getElementById('tagline').textContent = profile.tagline;
+      const nav = document.getElementById('profile-links');
+      nav.innerHTML = '';
+      for (const link of (profile.links || [])) {
+        const a = document.createElement('a');
+        a.href = link.url;
+        a.textContent = link.label;
+        nav.appendChild(a);
+      }
+    }
+
+    fetch('apps.json', { cache: 'no-cache' })
+      .then(r => { if (!r.ok) throw new Error('apps.json not found'); return r.json(); })
+      .then(data => {
+        renderProfile(data.profile);
+        apps = data.apps || [];
+        countEl.textContent = apps.length + (apps.length === 1 ? ' app' : ' apps');
+        render(apps);
+      })
+      .catch(err => {
+        grid.innerHTML = '<div class="error">Could not load <code>apps.json</code>.<br>' +
+          escapeHtml(err.message) + '</div>';
+      });
+
+    searchEl.addEventListener('input', applyFilter);
+  </script>
+</body>
+</html>
