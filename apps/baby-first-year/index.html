@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Baby's First Year</title>
+  <meta name="description" content="A week-by-week health and growth plan for the first year — appointments, activities, growth charts and milestones, all kept on your own device." />
+  <meta name="theme-color" content="#fbf7f4" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#14100e" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%B6%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar" id="topbar" hidden>
+      <div class="avatar" id="avatar">👶</div>
+      <div class="who">
+        <strong id="babyName">Baby</strong>
+        <span id="babyAge">—</span>
+      </div>
+      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">⚙️</button>
+    </header>
+
+    <main id="view" aria-live="polite"></main>
+
+    <footer class="legal">
+      General guidance for planning and remembering — not medical advice.
+      Always follow your midwife, health visitor, GP or paediatrician.<br />
+      Everything you enter stays in this browser on this device.<br />
+      <a href="../../">← Back to home</a>
+    </footer>
+  </div>
+
+  <button class="fab" id="fab" type="button" aria-label="Add something" hidden>+</button>
+
+  <nav class="tabbar" id="tabbar" role="tablist" hidden>
+    <button type="button" role="tab" data-tab="today" aria-selected="true"><span class="ico">🏠</span>Today</button>
+    <button type="button" role="tab" data-tab="plan" aria-selected="false"><span class="ico">📖</span>Plan</button>
+    <button type="button" role="tab" data-tab="calendar" aria-selected="false"><span class="ico">📅</span>Calendar</button>
+    <button type="button" role="tab" data-tab="growth" aria-selected="false"><span class="ico">📈</span>Growth</button>
+    <button type="button" role="tab" data-tab="milestones" aria-selected="false"><span class="ico">⭐</span>Wins</button>
+  </nav>
+
+  <div id="sheetHost"></div>
+
+  <!--
+    Plain static, no build step and no network calls at runtime. The app is
+    split across three files purely for readability:
+      styles.css  presentation
+      data.js     all the week-by-week content, schedules and reference data
+      app.js      state, rendering and interactions
+    They are ordinary scripts (not modules), so data.js must load before app.js.
+  -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
