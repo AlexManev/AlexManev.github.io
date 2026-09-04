@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Baby's First Year",
+      "description": "A week-by-week health and growth plan from birth to one year — appointments, age-appropriate activities, growth charts and every milestone, kept on your device.",
+      "path": "apps/baby-first-year/",
+      "tags": ["baby", "health", "parenting", "growth", "calendar", "milestones", "tracker"],
+      "emoji": "👶"
+    },
+    {
       "title": "Contraction Timer",
       "description": "A calm, private timer for labour contractions — track length, spacing, and whether a pattern is holding. Everything stays on your device.",
       "path": "apps/contraction-timer/",
