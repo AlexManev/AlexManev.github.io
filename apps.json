@@ -9,9 +9,9 @@
   "apps": [
     {
       "title": "Baby's First Year",
-      "description": "A week-by-week health and growth plan from birth to one year — appointments, age-appropriate activities, growth charts and every milestone, kept on your device.",
+      "description": "A week-by-week health and growth plan from birth to one year — feeding schedule and log, appointments, age-appropriate activities, growth charts and every milestone, kept on your device.",
       "path": "apps/baby-first-year/",
-      "tags": ["baby", "health", "parenting", "growth", "calendar", "milestones", "tracker"],
+      "tags": ["baby", "health", "parenting", "feeding", "growth", "calendar", "milestones", "tracker"],
       "emoji": "👶"
     },
     {

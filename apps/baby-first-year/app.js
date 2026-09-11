@@ -41,8 +41,10 @@
     s = s || {};
     return {
       version: 1,
-      baby: s.baby || null,           // {name, dob, sex, dueDate, units, region}
+      baby: s.baby || null,           // {name, dob, sex, dueDate, units, region,
+                                      //  feedMode, dayStart, targetMl}
       appointments: s.appointments || [],
+      feeds: s.feeds || [],           // {id, date, time, kind, ml, minutes, side, notes}
       measurements: s.measurements || [],
       milestones: s.milestones || {}, // id -> {date}
       activities: s.activities || {}, // "week:index" -> true
@@ -61,7 +63,10 @@
   }
 
   var S = loadState();
-  var UI = { tab: 'today', week: null, calMonth: null, calDay: null, chart: 'weight', openCheckpoint: null };
+  var UI = {
+    tab: 'today', week: null, calMonth: null, calDay: null, chart: 'weight',
+    openCheckpoint: null, feedRange: 'day', feedMeasure: null, feedDay: null
+  };
 
   /* =====================================================================
      Small helpers
@@ -380,14 +385,14 @@
     }
     el('topbar').hidden = false;
     el('tabbar').hidden = false;
-    el('fab').hidden = false;
+    el('fab').hidden = UI.tab === 'feeds';
 
     var a = ageInfo();
     el('babyName').textContent = S.baby.name || 'Baby';
     el('babyAge').textContent = a.label + (a.correctedLabel ? ' · ' + a.correctedLabel + ' corrected' : '');
 
     var views = {
-      today: todayView, plan: planView, calendar: calendarView,
+      today: todayView, plan: planView, feeds: feedsView, calendar: calendarView,
       growth: growthView, milestones: milestonesView
     };
     host.innerHTML = (views[UI.tab] || todayView)();
@@ -425,6 +430,7 @@
     var sex = b.sex || '';
     var reg = b.region || 'uk';
     var un = b.units || 'metric';
+    var mode = b.feedMode || 'mixed';
     return '' +
       '<label class="field"><span>Baby\'s name</span>' +
         '<input type="text" id="f-name" value="' + esc(b.name || '') + '" placeholder="Optional" autocomplete="off" /></label>' +
@@ -448,7 +454,21 @@
         '<select id="f-units">' +
           '<option value="metric"' + (un === 'metric' ? ' selected' : '') + '>Metric (kg, cm)</option>' +
           '<option value="imperial"' + (un === 'imperial' ? ' selected' : '') + '>Imperial (lb, oz, in)</option>' +
-        '</select></label>';
+        '</select></label>' +
+      '<label class="field"><span>How are you feeding?</span>' +
+        '<select id="f-feedmode">' +
+          '<option value="mixed"' + (mode === 'mixed' ? ' selected' : '') + '>Both breast and bottle</option>' +
+          '<option value="breast"' + (mode === 'breast' ? ' selected' : '') + '>Breast — track minutes</option>' +
+          '<option value="bottle"' + (mode === 'bottle' ? ' selected' : '') + '>Bottle — track millilitres</option>' +
+        '</select></label>' +
+      '<div class="field-row">' +
+        '<label class="field"><span>First feed of the day</span>' +
+          '<input type="time" id="f-daystart" value="' + esc(b.dayStart || '07:00') + '" /></label>' +
+        '<label class="field"><span>Daily ml target <span class="muted">optional</span></span>' +
+          '<input type="number" id="f-targetml" inputmode="numeric" min="0" max="1500" step="10" value="' +
+            (b.targetMl || '') + '" placeholder="auto" /></label>' +
+      '</div>' +
+      '<p class="tiny muted" style="margin:-4px 0 12px">The suggested times are spaced out from the first feed. Leave the target blank and it is worked out from your baby\'s age and last weight.</p>';
   }
 
   /* -------------------------------------------------------------- today */
@@ -502,6 +522,29 @@
       '<ul class="bullets small">' + band.development.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>' +
       '<button class="btn ghost sm" style="margin-top:8px;padding-left:0" data-act="goto-week" data-week="' + week + '" type="button">Open the full week →</button>' +
       '</section>';
+
+    /* Feeding snapshot */
+    var plan = feedingPlan();
+    var iso = toISO(today());
+    var tot = feedTotals(iso);
+    var mlPct = plan.target.ml ? Math.min(100, Math.round(tot.ml / plan.target.ml * 100)) : 0;
+    var nextSlot = null;
+    var nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+    for (var si = 0; si < plan.slots.length; si++) {
+      if (plan.slots[si].at > nowMins && !feedNearest(plan.slots[si], iso)) { nextSlot = plan.slots[si]; break; }
+    }
+    html += '<section class="card"><h3>Feeding today</h3>' +
+      '<div class="spread"><div><strong style="font-size:1.15rem">' +
+        (tracksMl() ? tot.ml + ' / ' + plan.target.ml + ' ml' : pluralise(tot.feeds, 'feed') + ' · ' + tot.minutes + ' min') +
+      '</strong><div class="small muted">' +
+        pluralise(tot.feeds, 'feed') + ' logged' + (tot.meals ? ', ' + pluralise(tot.meals, 'meal') : '') +
+        ' of about ' + plan.count + ' expected' + '</div></div>' +
+      (nextSlot ? '<span class="pill accent">Next ' + fmtClock(nextSlot.at) + '</span>' : '') + '</div>' +
+      (tracksMl() ? '<div class="progress" style="margin-top:12px"><i style="width:' + Math.max(2, mlPct) + '%"></i></div>' : '') +
+      '<div class="row" style="gap:8px;margin-top:12px">' +
+        '<button class="btn primary sm grow" data-act="new-feed" type="button">＋ Log a feed</button>' +
+        '<button class="btn sm grow" data-act="tab" data-tab="feeds" type="button">See the chart</button>' +
+      '</div></section>';
 
     /* Milestones snapshot */
     var cp = currentCheckpoint(a.months);
@@ -933,6 +976,456 @@
   }
 
   /* =====================================================================
+     Feeding — a suggested shape for the day, what actually happened, and
+     the gap between the two.
+
+     Totals run midnight to midnight so a day always means the same thing.
+     Suggested times are generated from the day's first feed and wrapped
+     into that same calendar day, so a round-the-clock newborn schedule
+     shows its small-hours feeds at the start of the day rather than
+     spilling into tomorrow.
+     ===================================================================== */
+
+  var FEED_KINDS = [
+    { v: 'bottle', label: 'Bottle', short: 'Bottle', emoji: '🍼' },
+    { v: 'breast', label: 'Breast', short: 'Breast', emoji: '🤱' },
+    { v: 'solids', label: 'Solid food', short: 'Solids', emoji: '🥣' }
+  ];
+
+  function feedKindMeta(v) {
+    for (var i = 0; i < FEED_KINDS.length; i++) if (FEED_KINDS[i].v === v) return FEED_KINDS[i];
+    return FEED_KINDS[0];
+  }
+
+  function feedMode() { return (S.baby && S.baby.feedMode) || 'mixed'; }
+  function tracksMl() { return feedMode() !== 'breast'; }
+  function tracksMinutes() { return feedMode() !== 'bottle'; }
+
+  function dayStartMinutes() {
+    var t = (S.baby && S.baby.dayStart) || '07:00';
+    return minutesOfDay(t);
+  }
+
+  function minutesOfDay(hhmm) {
+    var p = String(hhmm || '').split(':');
+    var m = (+p[0] || 0) * 60 + (+p[1] || 0);
+    return isNaN(m) ? 420 : Math.max(0, Math.min(1439, m));
+  }
+
+  function fmtClock(mins) {
+    var m = ((Math.round(mins) % 1440) + 1440) % 1440;
+    var h = Math.floor(m / 60), r = m % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (r < 10 ? '0' : '') + r;
+  }
+
+  function feedBandFor(week) {
+    var bands = D.FEEDING.bands;
+    for (var i = 0; i < bands.length; i++) {
+      if (week >= bands[i].from && week <= bands[i].to) return bands[i];
+    }
+    return bands[bands.length - 1];
+  }
+
+  function latestWeightKg() {
+    var withWeight = sortedMeasurements().filter(function (m) { return m.weight != null; });
+    return withWeight.length ? withWeight[withWeight.length - 1].weight : null;
+  }
+
+  /* The daily milk target, and — just as important — where it came from. */
+  function dailyTarget() {
+    var week = currentWeek();
+    var band = feedBandFor(week);
+    var override = S.baby && S.baby.targetMl;
+    if (override) {
+      return { ml: override, basis: 'your own target', band: band };
+    }
+    var kg = latestWeightKg();
+    var F = D.FEEDING;
+    /* The 150 ml/kg rule only holds once full feeds are established and
+       before solid food starts taking over. */
+    if (kg && week >= 2 && week <= F.weightRuleUntilWeek) {
+      var ml = Math.min(F.maxDailyMl, Math.round(kg * F.mlPerKgPerDay / 10) * 10);
+      return {
+        ml: ml,
+        basis: F.mlPerKgPerDay + ' ml per kg, from the last weight of ' + fmtWeight(kg),
+        band: band
+      };
+    }
+    /* Only offer the weight nudge when a weight would actually change the
+       figure: outside weeks 2–26 the target comes from the age band either
+       way, because solids take over from milk. */
+    var wouldUseWeight = !kg && week >= 2 && week <= F.weightRuleUntilWeek;
+    return {
+      ml: Math.round((band.dailyMl[0] + band.dailyMl[1]) / 20) * 10,
+      basis: 'typical for week ' + week + (wouldUseWeight ? ' — log a weight for a target scaled to your baby' : ''),
+      band: band
+    };
+  }
+
+  /* The projected day: one entry per suggested feed, sorted by clock time. */
+  function feedingPlan() {
+    var week = currentWeek();
+    var band = feedBandFor(week);
+    var target = dailyTarget();
+    var count = band.count;
+    var perFeedMl = Math.round(target.ml / count / 5) * 5;
+    var perFeedMins = Math.round((band.minutes[0] + band.minutes[1]) / 2);
+    var start = dayStartMinutes();
+    var slots = [];
+    for (var i = 0; i < count; i++) {
+      /* Rounded to the nearest quarter hour: 09:30 is a time a person can
+         actually aim for, 09:24 is noise. */
+      var raw = start + i * band.interval * 60;
+      var at = ((Math.round(raw / 15) * 15) % 1440 + 1440) % 1440;
+      slots.push({ at: at, ml: perFeedMl, minutes: perFeedMins, night: at < 360 || at >= 1320 });
+    }
+    slots.sort(function (a, b) { return a.at - b.at; });
+    return {
+      week: week, band: band, target: target, count: count,
+      perFeedMl: perFeedMl, perFeedMins: perFeedMins, slots: slots,
+      dailyMinutes: perFeedMins * count
+    };
+  }
+
+  function sortedFeeds() {
+    return S.feeds.slice().sort(function (a, b) {
+      if (a.date === b.date) return minutesOfDay(a.time) - minutesOfDay(b.time);
+      return a.date < b.date ? -1 : 1;
+    });
+  }
+
+  function feedsOn(iso) {
+    return sortedFeeds().filter(function (f) { return f.date === iso; });
+  }
+
+  /* Solid meals are logged and counted, but never folded into the milk
+     totals the projection is about. */
+  function isMilk(f) { return f.kind !== 'solids'; }
+
+  function feedTotals(iso) {
+    var list = feedsOn(iso);
+    var t = { ml: 0, minutes: 0, feeds: 0, meals: 0 };
+    list.forEach(function (f) {
+      if (!isMilk(f)) { t.meals++; return; }
+      t.feeds++;
+      if (f.ml) t.ml += f.ml;
+      if (f.minutes) t.minutes += f.minutes;
+    });
+    return t;
+  }
+
+  var MEASURES = {
+    ml: { label: 'Millilitres', short: 'ml', unit: 'ml' },
+    minutes: { label: 'Minutes', short: 'min', unit: 'min' },
+    feeds: { label: 'Feeds', short: 'feeds', unit: '' }
+  };
+
+  function availableMeasures() {
+    var out = [];
+    if (tracksMl()) out.push('ml');
+    if (tracksMinutes()) out.push('minutes');
+    out.push('feeds');
+    return out;
+  }
+
+  function activeMeasure() {
+    var avail = availableMeasures();
+    return avail.indexOf(UI.feedMeasure) >= 0 ? UI.feedMeasure : avail[0];
+  }
+
+  function projectionBasis(measure, plan) {
+    if (measure === 'ml') return plan.target.basis;
+    if (measure === 'minutes') {
+      return 'about ' + plan.band.minutes[0] + '–' + plan.band.minutes[1] + ' minutes a feed at this age';
+    }
+    return plan.band.feeds[0] + '–' + plan.band.feeds[1] + ' feeds a day at this age';
+  }
+
+  function targetFor(measure, plan) {
+    if (measure === 'ml') return plan.target.ml;
+    if (measure === 'minutes') return plan.dailyMinutes;
+    return plan.count;
+  }
+
+  function actualFor(measure, iso) {
+    var t = feedTotals(iso);
+    return measure === 'ml' ? t.ml : measure === 'minutes' ? t.minutes : t.feeds;
+  }
+
+  function feedValue(f, measure) {
+    if (measure === 'feeds') return isMilk(f) ? 1 : 0;
+    if (!isMilk(f)) return 0;
+    return (measure === 'ml' ? f.ml : f.minutes) || 0;
+  }
+
+  /* Round a maximum up so that dividing it into `ticks` gives clean labels:
+     910 ml becomes 1000 (0/250/500/750/1000), not 983. */
+  function niceCeil(value, ticks) {
+    ticks = ticks || 4;
+    if (!(value > 0)) return ticks;
+    var raw = value / ticks;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag;
+    var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 3 ? 3 : norm <= 5 ? 5 : 10) * mag;
+    return step * ticks;
+  }
+
+  /* -------------------------------------------------------------- view */
+
+  function feedsView() {
+    var plan = feedingPlan();
+    var iso = UI.feedDay || toISO(today());
+    var d = parseDay(iso);
+    var isToday = iso === toISO(today());
+    var measure = activeMeasure();
+    var totals = feedTotals(iso);
+    var target = targetFor(measure, plan);
+    var actual = actualFor(measure, iso);
+    var pct = target ? Math.min(100, Math.round(actual / target * 100)) : 0;
+
+    /* Only mention what was actually recorded — a parent logging bottles
+       does not need "0 min" in the headline every day. */
+    var summary = [];
+    if (tracksMl() && totals.ml) summary.push(totals.ml + ' ml');
+    if (tracksMinutes() && totals.minutes) summary.push(totals.minutes + ' min');
+    if (totals.feeds) summary.push(pluralise(totals.feeds, 'feed'));
+    if (totals.meals) summary.push(pluralise(totals.meals, 'meal'));
+    if (!summary.length) summary.push('Nothing logged yet');
+
+    var html = '<section class="hero">' +
+      '<div class="week-label">' + (isToday ? 'Today' : formatDay(d, { year: true })) + '</div>' +
+      '<h2>' + esc(summary.join(' · ')) + '</h2>' +
+      '<p class="small" style="margin:0">Projected ' + (measure === 'feeds' ? plan.count + ' feeds' : target + ' ' + MEASURES[measure].unit) +
+        ' across the day — ' + esc(projectionBasis(measure, plan)) + '.</p>' +
+      '<div class="progress"><i style="width:' + Math.max(2, pct) + '%"></i></div>' +
+      '<div class="progress-note">' + pct + '% of the projection' +
+        (isToday ? ' so far today' : '') + '</div>' +
+      '</section>';
+
+    /* Chart: day or week, against the projection. */
+    html += '<section class="card">' +
+      '<div class="seg" style="margin-bottom:10px">' +
+        '<button type="button" data-act="feed-range" data-range="day" aria-pressed="' + (UI.feedRange !== 'week' ? 'true' : 'false') + '">Day</button>' +
+        '<button type="button" data-act="feed-range" data-range="week" aria-pressed="' + (UI.feedRange === 'week' ? 'true' : 'false') + '">Week</button>' +
+      '</div>';
+    if (availableMeasures().length > 1) {
+      html += '<div class="seg" style="margin-bottom:14px">' +
+        availableMeasures().map(function (m) {
+          return '<button type="button" data-act="feed-measure" data-measure="' + m + '"' +
+            ' aria-pressed="' + (measure === m ? 'true' : 'false') + '">' + MEASURES[m].label + '</button>';
+        }).join('') + '</div>';
+    }
+    html += (UI.feedRange === 'week' ? weekChart(iso, measure, plan) : dayChart(iso, measure, plan));
+    html += '<div class="row" style="justify-content:space-between;margin-top:12px">' +
+        '<button class="btn sm" type="button" data-act="feed-day" data-delta="-1">‹ ' + (UI.feedRange === 'week' ? 'Previous week' : 'Previous day') + '</button>' +
+        (isToday ? '' : '<button class="btn sm" type="button" data-act="feed-day" data-delta="0">Today</button>') +
+        '<button class="btn sm" type="button" data-act="feed-day" data-delta="1"' + (isToday ? ' disabled style="opacity:.4"' : '') + '>' +
+          (UI.feedRange === 'week' ? 'Next week' : 'Next day') + ' ›</button>' +
+      '</div></section>';
+
+    /* Suggested times for the day, each tickable straight into the log. */
+    html += '<h2 class="section-title">Suggested times</h2>' +
+      '<p class="small muted" style="margin:0 0 10px">' + plan.band.feeds[0] + '–' + plan.band.feeds[1] + ' feeds a day at this age, about ' +
+      (plan.band.interval % 1 === 0 ? plan.band.interval : plan.band.interval.toFixed(1)) + ' hours apart' +
+      (tracksMl() ? ', around ' + plan.perFeedMl + ' ml each' : '') +
+      (tracksMinutes() ? ', roughly ' + plan.band.minutes[0] + '–' + plan.band.minutes[1] + ' minutes at the breast' : '') +
+      '. Spaced out from your first feed of the day (' + esc((S.baby && S.baby.dayStart) || '07:00') +
+      '), midnight to midnight.</p>' +
+      plan.slots.map(function (slot) { return slotItem(slot, iso, plan); }).join('');
+
+    if (plan.band.solids) {
+      html += '<div class="note small" style="margin-top:12px"><strong>🥣 Solid food</strong><br />' + esc(plan.band.solids) + '</div>';
+    }
+    html += '<div class="note small" style="margin-top:10px">' + esc(plan.band.note) + '</div>';
+
+    /* What actually happened. */
+    var list = feedsOn(iso);
+    html += '<h2 class="section-title">' + (isToday ? 'Logged today' : 'Logged on ' + formatDay(d)) +
+      ' <span class="pill">' + list.length + '</span></h2>';
+    html += list.length
+      ? list.map(feedItem).join('')
+      : '<div class="empty">Nothing logged for this day yet.</div>';
+    html += '<button class="btn primary block" style="margin-top:12px" data-act="new-feed" data-date="' + iso + '" type="button">＋ Log a feed</button>';
+
+    html += '<details class="disclose" style="margin-top:14px"><summary>How to read all this</summary><div class="body">' +
+      '<ul class="bullets small" style="margin-top:6px">' +
+        D.FEEDING.guidance.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') +
+      '</ul>' +
+      '<p class="small" style="margin-bottom:6px"><strong>Worth asking about:</strong></p>' +
+      '<ul class="bullets small">' + D.FEEDING.flags.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
+      '</div></details>';
+    return html;
+  }
+
+  /* A suggested slot counts as taken if something was logged within 75
+     minutes of it — close enough that showing it as missed would be wrong. */
+  function feedNearest(slot, iso) {
+    var best = null, bestGap = Infinity;
+    feedsOn(iso).filter(isMilk).forEach(function (f) {
+      var gap = Math.abs(minutesOfDay(f.time) - slot.at);
+      if (gap < bestGap) { bestGap = gap; best = f; }
+    });
+    return bestGap <= 75 ? best : null;
+  }
+
+  function slotItem(slot, iso, plan) {
+    var match = feedNearest(slot, iso);
+    var nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+    var isToday = iso === toISO(today());
+    var passed = !isToday || slot.at <= nowMins;
+    var detail = [];
+    if (tracksMl()) detail.push('about ' + slot.ml + ' ml');
+    if (tracksMinutes()) detail.push(plan.band.minutes[0] + '–' + plan.band.minutes[1] + ' min');
+    var pill = match
+      ? '<span class="pill good">Done</span>'
+      : passed
+        ? '<span class="pill warn">Not logged</span>'
+        : '<span class="pill">' + (slot.night ? 'Night' : 'To come') + '</span>';
+    return '<div class="item" style="cursor:default">' +
+      '<span class="lead">' + (match ? '✓' : slot.night ? '🌙' : '🍼') + '</span>' +
+      '<span class="body"><strong>' + fmtClock(slot.at) + '</strong>' +
+        '<span>' + esc(detail.join(' · ')) +
+          (match ? ' · logged at ' + esc(formatTime(match.time)) +
+            (match.ml ? ', ' + match.ml + ' ml' : '') +
+            (match.minutes ? ', ' + match.minutes + ' min' : '') : '') + '</span>' +
+        (match ? '' : '<button class="btn sm" style="margin-top:8px" type="button" data-act="new-feed"' +
+          ' data-date="' + iso + '" data-time="' + fmtClock(slot.at) + '" data-ml="' + slot.ml + '"' +
+          ' data-minutes="' + slot.minutes + '">＋ Log this feed</button>') +
+      '</span>' + pill + '</div>';
+  }
+
+  function feedItem(f) {
+    var meta = feedKindMeta(f.kind);
+    var bits = [];
+    if (f.ml) bits.push(f.ml + ' ml');
+    if (f.minutes) bits.push(f.minutes + ' min');
+    if (f.side) bits.push(f.side);
+    if (f.notes) bits.push(f.notes);
+    return '<button class="item" type="button" data-act="edit-feed" data-id="' + esc(f.id) + '">' +
+      '<span class="lead">' + meta.emoji + '</span>' +
+      '<span class="body"><strong>' + esc(formatTime(f.time)) + ' · ' + esc(meta.label) + '</strong>' +
+      '<span>' + esc(bits.join(' · ') || 'no detail') + '</span></span>' +
+      '<span class="pill">Edit</span></button>';
+  }
+
+  /* ------------------------------------------------------------- charts */
+
+  /* Cumulative through the day: the projection as a dashed staircase, what
+     actually happened as a solid one. Works for ml, minutes or feed count. */
+  function dayChart(iso, measure, plan) {
+    var W = 340, H = 200, padL = 38, padR = 10, padT = 12, padB = 26;
+    var list = feedsOn(iso).filter(function (f) { return feedValue(f, measure) > 0; });
+    var target = targetFor(measure, plan);
+
+    var projPts = [{ x: 0, y: 0 }];
+    var running = 0;
+    plan.slots.forEach(function (slot) {
+      var v = measure === 'ml' ? slot.ml : measure === 'minutes' ? slot.minutes : 1;
+      projPts.push({ x: slot.at, y: running });
+      running += v;
+      projPts.push({ x: slot.at, y: running });
+    });
+    projPts.push({ x: 1440, y: running });
+
+    var actPts = [{ x: 0, y: 0 }];
+    var run2 = 0;
+    list.forEach(function (f) {
+      var at = minutesOfDay(f.time);
+      actPts.push({ x: at, y: run2 });
+      run2 += feedValue(f, measure);
+      actPts.push({ x: at, y: run2 });
+    });
+    var isToday = iso === toISO(today());
+    var nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+    actPts.push({ x: isToday ? Math.max(nowMins, 0) : 1440, y: run2 });
+
+    var hi = niceCeil(Math.max(running, run2, target, 1) * 1.02, 4);
+    function px(m) { return padL + (m / 1440) * (W - padL - padR); }
+    function py(v) { return H - padB - (v / hi) * (H - padT - padB); }
+    function path(pts) { return pts.map(function (p) { return px(p.x).toFixed(1) + ',' + py(p.y).toFixed(1); }).join(' '); }
+
+    var svg = '<div class="chart-wrap"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+      esc('Cumulative ' + MEASURES[measure].label.toLowerCase() + ' through the day against the projection') + '">';
+    for (var i = 0; i <= 4; i++) {
+      var v = hi * (i / 4), y = py(v);
+      svg += '<line class="gridline" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '"></line>' +
+        '<text x="' + (padL - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + Math.round(v) + '</text>';
+    }
+    for (var h = 0; h <= 24; h += 6) {
+      var anchor = h === 0 ? 'start' : h === 24 ? 'end' : 'middle';
+      svg += '<text x="' + px(h * 60).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="' + anchor + '">' +
+        (h < 10 ? '0' : '') + h + ':00</text>';
+    }
+    svg += '<line class="axis" x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '"></line>';
+    svg += '<polyline class="proj" points="' + path(projPts) + '"></polyline>';
+    if (isToday) {
+      svg += '<line class="now" x1="' + px(nowMins).toFixed(1) + '" y1="' + padT + '" x2="' + px(nowMins).toFixed(1) + '" y2="' + (H - padB) + '"></line>';
+    }
+    svg += '<polyline class="line" points="' + path(actPts) + '"></polyline>';
+    svg += list.map(function (f, idx) {
+      var upto = 0;
+      for (var j = 0; j <= idx; j++) upto += feedValue(list[j], measure);
+      return '<circle class="dot" cx="' + px(minutesOfDay(f.time)).toFixed(1) + '" cy="' + py(upto).toFixed(1) + '" r="3"></circle>';
+    }).join('');
+    svg += '</svg></div>' +
+      '<div class="legend tiny muted"><span class="k-act">Logged</span><span class="k-proj">Projection</span>' +
+      (isToday ? '<span class="k-now">Now</span>' : '') + '</div>' +
+      '<div class="tiny muted" style="margin-top:4px">Running total of ' + MEASURES[measure].label.toLowerCase() +
+      ' from midnight. Projection: ' + Math.round(running) + ' ' + (MEASURES[measure].unit || 'feeds') + ' over ' + plan.count + ' feeds.</div>';
+    return svg;
+  }
+
+  /* Seven days of totals as bars, with the projection as a level line. */
+  function weekChart(iso, measure, plan) {
+    var W = 340, H = 200, padL = 38, padR = 10, padT = 12, padB = 30;
+    var end = parseDay(iso);
+    var days = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = addDays(end, -i);
+      var dIso = toISO(d);
+      days.push({ iso: dIso, date: d, value: actualFor(measure, dIso), meals: feedTotals(dIso).meals });
+    }
+    var target = targetFor(measure, plan);
+    var hi = niceCeil(Math.max(target, Math.max.apply(null, days.map(function (x) { return x.value; })), 1) * 1.04, 4);
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var slotW = plotW / 7, barW = Math.min(28, slotW * 0.56);
+
+    function py(v) { return H - padB - (v / hi) * plotH; }
+
+    var svg = '<div class="chart-wrap"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+      esc('Daily ' + MEASURES[measure].label.toLowerCase() + ' for the last seven days against the projection') + '">';
+    for (var g = 0; g <= 4; g++) {
+      var v = hi * (g / 4), y = py(v);
+      svg += '<line class="gridline" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '"></line>' +
+        '<text x="' + (padL - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + Math.round(v) + '</text>';
+    }
+    days.forEach(function (day, i) {
+      var cx = padL + slotW * (i + 0.5);
+      var h = day.value > 0 ? Math.max(1.5, py(0) - py(day.value)) : 0;
+      var selected = day.iso === iso;
+      if (h) {
+        svg += '<rect class="bar' + (selected ? ' sel' : '') + '" x="' + (cx - barW / 2).toFixed(1) + '" y="' + py(day.value).toFixed(1) +
+          '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"></rect>';
+      }
+      svg += '<text x="' + cx.toFixed(1) + '" y="' + (H - 15) + '" text-anchor="middle">' + DOW_SHORT[day.date.getDay()].charAt(0) + '</text>';
+      svg += '<text x="' + cx.toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle"' + (selected ? ' style="fill:var(--accent)"' : '') + '>' + day.date.getDate() + '</text>';
+    });
+    svg += '<line class="target" x1="' + padL + '" y1="' + py(target).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + py(target).toFixed(1) + '"></line>';
+    svg += '<line class="axis" x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '"></line>';
+    svg += '</svg></div>';
+
+    var logged = days.filter(function (x) { return x.value > 0; });
+    var avg = logged.length ? Math.round(logged.reduce(function (a, x) { return a + x.value; }, 0) / logged.length) : 0;
+    svg += '<div class="legend tiny muted"><span class="k-act">Daily total</span><span class="k-proj">Projection (' + Math.round(target) + ')</span></div>' +
+      '<div class="tiny muted" style="margin-top:4px">' +
+        (logged.length
+          ? 'Average over the ' + pluralise(logged.length, 'day') + ' with anything logged: <strong>' + avg + ' ' + (MEASURES[measure].unit || 'feeds') + '</strong> a day.'
+          : 'Nothing logged in this week yet.') +
+      '</div>';
+    return svg;
+  }
+
+  /* =====================================================================
      Sheets
      ===================================================================== */
 
@@ -977,6 +1470,54 @@
             '<button class="btn danger" type="button" data-act="delete-appointment" data-id="' + esc(ap.id) + '">Delete</button></div>'
         : '');
     openSheet(editing ? 'Edit appointment' : 'New appointment', body);
+  }
+
+  function feedSheet(f) {
+    var editing = !!f.id;
+    var kind = f.kind || (feedMode() === 'breast' ? 'breast' : 'bottle');
+    var now = new Date();
+    var body = '' +
+      '<input type="hidden" id="fd-id" value="' + esc(f.id || '') + '" />' +
+      '<div class="seg" style="margin-bottom:14px">' +
+        FEED_KINDS.map(function (k) {
+          return '<button type="button" data-act="feed-kind" data-kind="' + k.v + '"' +
+            ' aria-pressed="' + (kind === k.v ? 'true' : 'false') + '">' + k.emoji + ' ' + esc(k.short) + '</button>';
+        }).join('') +
+      '</div>' +
+      '<input type="hidden" id="fd-kind" value="' + esc(kind) + '" />' +
+      '<div class="field-row">' +
+        '<label class="field"><span>Date</span><input type="date" id="fd-date" value="' +
+          esc(f.date || UI.feedDay || toISO(today())) + '" max="' + toISO(today()) + '" /></label>' +
+        '<label class="field"><span>Time</span><input type="time" id="fd-time" value="' +
+          esc(f.time || fmtClock(now.getHours() * 60 + now.getMinutes())) + '" /></label>' +
+      '</div>' +
+      (kind === 'solids'
+        ? '<label class="field"><span>What did they eat?</span><input type="text" id="fd-notes" value="' + esc(f.notes || '') +
+            '" placeholder="Porridge and pear, a few spoons" /></label>'
+        : '<div class="field-row">' +
+            (kind === 'breast'
+              ? ''
+              : '<label class="field"><span>Millilitres taken</span><input type="number" id="fd-ml" inputmode="numeric" min="0" max="500" step="5" value="' +
+                  (f.ml != null ? f.ml : '') + '" placeholder="e.g. ' + feedingPlan().perFeedMl + '" /></label>') +
+            '<label class="field"><span>Minutes</span><input type="number" id="fd-minutes" inputmode="numeric" min="0" max="180" step="1" value="' +
+              (f.minutes != null ? f.minutes : '') + '" placeholder="e.g. ' + feedingPlan().perFeedMins + '" /></label>' +
+          '</div>' +
+          (kind === 'breast'
+            ? '<label class="field"><span>Side</span><select id="fd-side">' +
+                ['', 'left', 'right', 'both'].map(function (sd) {
+                  return '<option value="' + sd + '"' + ((f.side || '') === sd ? ' selected' : '') + '>' +
+                    (sd === '' ? 'Not recorded' : sd.charAt(0).toUpperCase() + sd.slice(1)) + '</option>';
+                }).join('') + '</select></label>'
+            : '') +
+          '<label class="field"><span>Notes <span class="muted">optional</span></span><input type="text" id="fd-notes" value="' +
+            esc(f.notes || '') + '" placeholder="Fussy, fell asleep, big posset…" /></label>') +
+      '<div class="sheet-actions">' +
+        '<button class="btn" type="button" data-act="close-sheet">Cancel</button>' +
+        '<button class="btn primary" type="button" data-act="save-feed">Save</button>' +
+      '</div>' +
+      (editing ? '<div class="sheet-actions"><button class="btn danger block" type="button" data-act="delete-feed" data-id="' +
+        esc(f.id) + '">Delete this feed</button></div>' : '');
+    openSheet(editing ? 'Edit feed' : 'Log a feed', body);
   }
 
   function measurementSheet(m) {
@@ -1031,6 +1572,7 @@
 
   function quickAddSheet() {
     var body = '<div class="stack">' +
+      '<button class="btn block" type="button" data-act="new-feed">🍼  Log a feed</button>' +
       '<button class="btn block" type="button" data-act="new-appointment">📅  Add an appointment</button>' +
       '<button class="btn block" type="button" data-act="new-measurement">📈  Add a measurement</button>' +
       '<button class="btn block" type="button" data-act="tab" data-tab="milestones">⭐  Record a milestone</button>' +
@@ -1122,19 +1664,43 @@
          nothing to correct for, so it is simply ignored. */
       due = '';
     }
+    var targetMl = parseInt(el('f-targetml').value, 10);
     return {
       name: el('f-name').value.trim(),
       dob: dob,
       dueDate: due,
       sex: el('f-sex').value,
       region: el('f-region').value,
-      units: el('f-units').value
+      units: el('f-units').value,
+      feedMode: el('f-feedmode').value,
+      dayStart: el('f-daystart').value || '07:00',
+      targetMl: isNaN(targetMl) || targetMl <= 0 ? null : targetMl
     };
   }
 
   function findAppointment(id) {
     for (var i = 0; i < S.appointments.length; i++) if (S.appointments[i].id === id) return S.appointments[i];
     return null;
+  }
+
+  function findFeed(id) {
+    for (var i = 0; i < S.feeds.length; i++) if (S.feeds[i].id === id) return S.feeds[i];
+    return null;
+  }
+
+  function readFeedForm() {
+    var kind = el('fd-kind').value;
+    var sideNode = el('fd-side');
+    return {
+      id: el('fd-id').value || null,
+      date: el('fd-date').value,
+      time: el('fd-time').value,
+      kind: kind,
+      ml: kind === 'solids' ? null : num('fd-ml'),
+      minutes: kind === 'solids' ? null : num('fd-minutes'),
+      side: sideNode ? sideNode.value : null,
+      notes: el('fd-notes') ? el('fd-notes').value.trim() : ''
+    };
   }
 
   function findMeasurement(id) {
@@ -1260,6 +1826,81 @@
       download(slug(S.baby.name) + '-appointments.ics', icsFor(list), 'text/calendar;charset=utf-8');
     },
 
+    'new-feed': function (t) {
+      closeSheet();
+      feedSheet({
+        date: (t && t.dataset.date) || UI.feedDay || toISO(today()),
+        time: t && t.dataset.time ? t.dataset.time : null,
+        ml: t && t.dataset.ml ? parseInt(t.dataset.ml, 10) : null,
+        minutes: t && t.dataset.minutes ? parseInt(t.dataset.minutes, 10) : null
+      });
+    },
+
+    'edit-feed': function (t) {
+      var f = findFeed(t.dataset.id);
+      if (f) feedSheet(f);
+    },
+
+    /* Switching kind re-opens the sheet, because a bottle and a bowl of
+       porridge need different fields. Whatever is filled in is carried over. */
+    'feed-kind': function (t) {
+      var draft = readFeedForm();
+      draft.kind = t.dataset.kind;
+      feedSheet(draft);
+    },
+
+    'save-feed': function () {
+      var data = readFeedForm();
+      if (!data.date) { alert('Pick the date of this feed.'); return; }
+      if (!data.time) { alert('Pick the time of this feed.'); return; }
+      if (data.kind !== 'solids' && !data.ml && !data.minutes) {
+        alert('Add a volume or a number of minutes, so it can be compared with the projection.');
+        return;
+      }
+      var rec = data.id ? findFeed(data.id) : null;
+      data.id = data.id || uid();
+      if (rec) S.feeds[S.feeds.indexOf(rec)] = data;
+      else S.feeds.push(data);
+      save();
+      UI.feedDay = data.date;
+      closeSheet();
+      if (UI.tab !== 'feeds' && UI.tab !== 'today') UI.tab = 'feeds';
+      render();
+    },
+
+    'delete-feed': function (t) {
+      var f = findFeed(t.dataset.id);
+      if (!f) return;
+      if (!confirm('Delete this feed?')) return;
+      S.feeds.splice(S.feeds.indexOf(f), 1);
+      save();
+      closeSheet();
+      render();
+    },
+
+    'feed-range': function (t) {
+      UI.feedRange = t.dataset.range;
+      render();
+    },
+
+    'feed-measure': function (t) {
+      UI.feedMeasure = t.dataset.measure;
+      render();
+    },
+
+    'feed-day': function (t) {
+      var delta = parseInt(t.dataset.delta, 10);
+      if (!delta) {
+        UI.feedDay = toISO(today());
+      } else {
+        var step = UI.feedRange === 'week' ? 7 : 1;
+        var next = addDays(parseDay(UI.feedDay || toISO(today())), delta * step);
+        /* There is nothing to show in the future. */
+        UI.feedDay = next > today() ? toISO(today()) : toISO(next);
+      }
+      render();
+    },
+
     'new-measurement': function () {
       closeSheet();
       measurementSheet({});
@@ -1344,7 +1985,10 @@
       S = migrate(null);
       save();
       closeSheet();
-      UI = { tab: 'today', week: null, calMonth: null, calDay: null, chart: 'weight', openCheckpoint: null };
+      UI = {
+        tab: 'today', week: null, calMonth: null, calDay: null, chart: 'weight',
+        openCheckpoint: null, feedRange: 'day', feedMeasure: null, feedDay: null
+      };
       render();
     },
 
