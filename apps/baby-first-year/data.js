@@ -8,6 +8,7 @@
     MILESTONES achievement checklists at 2, 4, 6, 9 and 12 months
     GROWTH     WHO growth-standard reference bands (3rd / 50th / 97th centile)
     HELP       when to seek medical help, whatever the week
+    FEEDING    typical feeding shape by week — feeds, volumes, minutes, solids
 
   This is general information for planning and remembering — it is not medical
   advice, and it never replaces your midwife, health visitor, GP or paediatrician.
@@ -607,6 +608,109 @@ window.BFY_DATA = (function () {
     }
   };
 
+  /* ------------------------------------------------------------- feeding */
+  /* A typical shape for a feeding day, by week. These are averages from
+     standard infant-feeding guidance, not targets to hit:
+
+       feeds      typical number of milk feeds in 24 hours [low, high]
+       interval   hours between the suggested times
+       mlPerFeed  typical volume per bottle [low, high]
+       dailyMl    typical total milk over 24 hours [low, high]
+       minutes    typical time at the breast per feed [low, high]
+       solids     where solid food fits, once it starts
+
+     Formula volumes follow the ~150 ml per kg of body weight a day rule of
+     thumb, which is why the app prefers a logged weight when it has one. */
+  const FEEDING = {
+    mlPerKgPerDay: 150,
+    mlPerKgRange: [120, 180],
+    maxDailyMl: 1000,
+    weightRuleUntilWeek: 26,
+
+    bands: [
+      {
+        from: 0, to: 0, feeds: [8, 12], count: 10, interval: 2.5,
+        mlPerFeed: [30, 60], dailyMl: [250, 500], minutes: [20, 45], solids: null,
+        note: 'Volumes climb steeply in the first week — a teaspoon or two at the first feed, up to about 60 ml by day 5. Feed at the first cue, day or night, and expect a cluster most evenings.'
+      },
+      {
+        from: 1, to: 2, feeds: [8, 10], count: 8, interval: 3,
+        mlPerFeed: [60, 90], dailyMl: [500, 750], minutes: [20, 40], solids: null,
+        note: 'Still round the clock. A growth spurt around week two can double how often they ask for a fortnight — that is how supply is built, not a sign anything is wrong.'
+      },
+      {
+        from: 3, to: 4, feeds: [7, 9], count: 7, interval: 3.5,
+        mlPerFeed: [90, 120], dailyMl: [600, 850], minutes: [15, 35], solids: null,
+        note: 'Feeds get faster and more efficient. A ten-minute feed can be a complete one — watch the baby, not the clock.'
+      },
+      {
+        from: 5, to: 8, feeds: [6, 8], count: 6, interval: 4,
+        mlPerFeed: [110, 150], dailyMl: [700, 900], minutes: [15, 30], solids: null,
+        note: 'Another spurt lands around six weeks. Some babies now stretch one gap at night and make up for it during the day.'
+      },
+      {
+        from: 9, to: 13, feeds: [5, 7], count: 6, interval: 4,
+        mlPerFeed: [130, 180], dailyMl: [750, 950], minutes: [12, 25], solids: null,
+        note: 'A rough rhythm you can almost predict. Milk is still everything — solid food is not recommended before around six months.'
+      },
+      {
+        from: 14, to: 21, feeds: [5, 6], count: 5, interval: 4,
+        mlPerFeed: [150, 200], dailyMl: [800, 1000], minutes: [10, 20], solids: null,
+        note: 'Distraction creeps in around four months: a quiet, dim room often gets a fuller feed. Drooling and chewing fists is teething, not hunger for solids.'
+      },
+      {
+        from: 22, to: 26, feeds: [4, 6], count: 5, interval: 3.5,
+        mlPerFeed: [180, 220], dailyMl: [750, 1000], minutes: [10, 20],
+        solids: 'One taste a day at first, building towards one small meal — offered after a milk feed, not instead of one.',
+        note: 'About 1000 ml a day is the usual ceiling for formula. When solids start around six months, milk stays the main source of nutrition.'
+      },
+      {
+        from: 27, to: 34, feeds: [4, 5], count: 4, interval: 4,
+        mlPerFeed: [180, 240], dailyMl: [600, 900], minutes: [8, 18],
+        solids: 'Two, moving to three, small meals a day, with iron-rich food every day.',
+        note: 'Milk starts to give way to food. Offer water in an open cup at meals and let them make a mess of it.'
+      },
+      {
+        from: 35, to: 39, feeds: [3, 4], count: 4, interval: 4,
+        mlPerFeed: [180, 240], dailyMl: [500, 800], minutes: [8, 15],
+        solids: 'Three meals plus one or two snacks around the milk feeds.',
+        note: 'Meals now carry real nutrition, so the milk total drops. That is meant to happen.'
+      },
+      {
+        from: 40, to: 47, feeds: [3, 4], count: 3, interval: 5.5,
+        mlPerFeed: [180, 240], dailyMl: [400, 600], minutes: [5, 15],
+        solids: 'Three meals and two snacks, mostly the same food as everyone else, with no added salt.',
+        note: 'Formula-fed babies usually settle around 350–500 ml a day. Breastfeeding carries on as long as it suits you both.'
+      },
+      {
+        from: 48, to: 52, feeds: [2, 3], count: 3, interval: 6,
+        mlPerFeed: [150, 240], dailyMl: [300, 500], minutes: [5, 15],
+        solids: 'Three meals and two snacks — food is the main event now, milk is a drink alongside it.',
+        note: 'From one year, whole cow\'s milk can replace formula. Around 300–400 ml a day is plenty; much more than that crowds out iron-rich food.'
+      }
+    ],
+
+    /* Shown alongside every projection, because a number on a chart is the
+       easiest thing in the world to start chasing. */
+    guidance: [
+      'Feed on cue, not on the clock. These times are a shape for the day, not a schedule to keep to.',
+      'Never hold back a hungry baby or push a full one. Appetite swings day to day, and evenings are usually hungrier than mornings.',
+      'Wet nappies, steady weight gain and a content baby tell you far more than any daily total.',
+      'Breastfeeding cannot be measured in millilitres and does not need to be — count feeds, minutes and nappies instead.',
+      'Formula guide: roughly 150 ml per kilo of body weight a day up to about six months, spread across the feeds, and rarely more than 1000 ml a day.',
+      'Once solid food starts at around six months, milk comes down gradually. A falling milk total is progress, not a problem.'
+    ],
+
+    /* Feeding-specific reasons to ask someone today. */
+    flags: [
+      'Fewer than six wet nappies a day, or very dark, strong-smelling urine.',
+      'Refusing feeds, or consistently taking much less than usual for more than a day.',
+      'No weight gain over a fortnight, or weight loss after the first two weeks.',
+      'Forceful vomiting after feeds, green vomit, or blood in vomit or nappies.',
+      'Falling asleep at every feed and never finishing, or feeds that always hurt.'
+    ]
+  };
+
   /* ---------------------------------------------------------------- help */
   const HELP = {
     urgent: [
@@ -627,5 +731,5 @@ window.BFY_DATA = (function () {
     ]
   };
 
-  return { BANDS, WEEKS, SCHEDULES, MILESTONES, GROWTH, HELP };
+  return { BANDS, WEEKS, SCHEDULES, MILESTONES, GROWTH, HELP, FEEDING };
 })();
