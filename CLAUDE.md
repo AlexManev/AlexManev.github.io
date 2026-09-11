@@ -97,6 +97,28 @@ rely on a CDN or in-browser Babel at runtime. Instead:
 Only take on a build step when an app genuinely needs a framework. A small app
 should stay plain static.
 
+## Cache busting when an app has separate JS/CSS files
+
+GitHub Pages serves assets with a short cache lifetime, and browsers hold them
+longer. A returning visitor can therefore pair a **freshly fetched `index.html`
+with a cached older `app.js`** — the new markup offers a tab or button the old
+script has never heard of, and it silently does nothing. This shipped once
+already in `apps/baby-first-year/`.
+
+So for any app that loads its JS/CSS as separate files, reference them with a
+build stamp and bump it whenever any of those files change:
+
+```html
+<script>window.BFY_BUILD = '2026-09-11';</script>
+<script src="data.js?v=2026-09-11"></script>
+<script src="app.js?v=2026-09-11"></script>
+```
+
+Changing the query string changes the URL, so the cache cannot answer for it.
+Keep the same stamp in a `BUILD` constant inside the script and compare the two
+at start-up, so a mismatch shows the user a reload prompt instead of a dead
+button. Single-file apps like `apps/hello-world/` need none of this.
+
 ## Porting a Claude artifact into an app
 
 Apps like the Contraction Timer originated as Claude artifacts, which run against

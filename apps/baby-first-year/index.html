@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#fbf7f4" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#14100e" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%B6%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2026-09-11" />
 </head>
 <body>
   <div class="app">
@@ -51,8 +51,17 @@
       data.js     all the week-by-week content, schedules and reference data
       app.js      state, rendering and interactions
     They are ordinary scripts (not modules), so data.js must load before app.js.
+
+    IMPORTANT — the ?v= build stamp below must be bumped whenever any of the
+    three files changes. Without it a browser can pair a freshly fetched
+    index.html with a cached older app.js: the new markup offers a tab the old
+    script has never heard of, and the tab then does nothing at all. Changing
+    the query string changes the URL, so the cache cannot answer for it.
+    BFY_BUILD is the same stamp, which lets app.js notice a mismatch and say so
+    rather than failing silently.
   -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script>window.BFY_BUILD = '2026-09-11';</script>
+  <script src="data.js?v=2026-09-11"></script>
+  <script src="app.js?v=2026-09-11"></script>
 </body>
 </html>

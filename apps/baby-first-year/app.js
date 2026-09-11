@@ -14,6 +14,10 @@
   var D = window.BFY_DATA;
   var KEY = 'bfy.v1';
 
+  /* Must match the ?v= stamp and window.BFY_BUILD in index.html. Bump both
+     together when any of styles.css, data.js or app.js changes. */
+  var BUILD = '2026-09-11';
+
   /* =====================================================================
      Storage — localStorage with an in-memory fallback so a blocked storage
      jar (private browsing, cookies disabled) degrades instead of crashing.
@@ -395,7 +399,12 @@
       today: todayView, plan: planView, feeds: feedsView, calendar: calendarView,
       growth: growthView, milestones: milestonesView
     };
-    host.innerHTML = (views[UI.tab] || todayView)();
+    if (!views[UI.tab]) {
+      /* Only reachable when index.html and app.js came from different
+         deploys, which the build stamp is there to prevent. */
+      UI.tab = 'today';
+    }
+    host.innerHTML = views[UI.tab]();
 
     Array.prototype.forEach.call(el('tabbar').querySelectorAll('button'), function (b) {
       b.setAttribute('aria-selected', b.dataset.tab === UI.tab ? 'true' : 'false');
@@ -1997,6 +2006,12 @@
       render();
     },
 
+    'hard-reload': function () {
+      /* A changing query string is the only reliable way to make every
+         browser refetch rather than answer from its own cache. */
+      location.replace(location.pathname + '?r=' + Date.now());
+    },
+
     'close-sheet': function () { closeSheet(); },
 
     'quick-add': function () { quickAddSheet(); }
@@ -2091,6 +2106,21 @@
   el('settingsBtn').addEventListener('click', settingsSheet);
   el('fab').addEventListener('click', quickAddSheet);
 
+  /* If the page and the script came from different deploys, the browser is
+     holding a stale copy of one of them. Nothing below can work reliably, so
+     say it plainly and offer a reload that bypasses the cache. */
+  function checkBuild() {
+    if (!window.BFY_BUILD || window.BFY_BUILD === BUILD) return;
+    var bar = document.createElement('div');
+    bar.className = 'note alert small';
+    bar.style.margin = '12px 0 0';
+    bar.innerHTML = 'This page and its script are from different versions of the app, ' +
+      'so some tabs will not open. ' +
+      '<button class="btn sm" type="button" data-act="hard-reload" style="margin-top:8px">Reload the app</button>';
+    var app = $('.app');
+    if (app) app.insertBefore(bar, app.firstChild);
+  }
+
   /* Another tab of the same app may have written newer data. */
   window.addEventListener('storage', function (e) {
     if (e.key !== KEY) return;
@@ -2104,4 +2134,5 @@
   });
 
   render();
+  checkBuild();
 })();
