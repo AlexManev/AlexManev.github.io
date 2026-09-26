@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Flight Stopovers</title>
+  <meta name="description" content="Pick a departure and arrival city and see every stopover city you could connect through, drawn on a world map." />
+  <meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%88%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css?v=2026-09-26" />
+</head>
+<body>
+  <main class="layout">
+    <section class="controls" aria-label="Choose your trip">
+      <div class="head">
+        <a class="back" href="../../">← Back to home</a>
+        <h1>✈️ Flight Stopovers</h1>
+        <p class="lede">Pick where you leave from and where you're going — every city you could connect through appears on the map.</p>
+      </div>
+
+      <form class="trip" id="trip" autocomplete="off" onsubmit="return false">
+        <div class="field">
+          <label for="from">From</label>
+          <div class="combo">
+            <input id="from" type="text" placeholder="City or airport code" role="combobox"
+              aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" spellcheck="false" />
+            <ul class="suggest" id="from-list" role="listbox" hidden></ul>
+          </div>
+        </div>
+        <button class="swap" id="swap" type="button" aria-label="Swap departure and arrival" title="Swap">⇅</button>
+        <div class="field">
+          <label for="to">To</label>
+          <div class="combo">
+            <input id="to" type="text" placeholder="City or airport code" role="combobox"
+              aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" spellcheck="false" />
+            <ul class="suggest" id="to-list" role="listbox" hidden></ul>
+          </div>
+        </div>
+      </form>
+
+      <div class="filters">
+        <div class="seg" role="radiogroup" aria-label="Maximum number of stops">
+          <button type="button" role="radio" data-stops="1" aria-checked="true">1 stop</button>
+          <button type="button" role="radio" data-stops="2" aria-checked="false">Up to 2 stops</button>
+        </div>
+        <label class="detour">
+          <span>Max detour</span>
+          <select id="detour">
+            <option value="1.1">+10%</option>
+            <option value="1.25">+25%</option>
+            <option value="1.5" selected>+50%</option>
+            <option value="2">+100%</option>
+            <option value="3">+200%</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="map-wrap" aria-label="Route map">
+      <svg id="map" role="img" aria-label="World map of stopover routes"></svg>
+      <div class="map-tools">
+        <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+        <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+        <button type="button" id="zoomFit" aria-label="Fit routes" title="Fit routes">⤢</button>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="k-direct"></i>Direct</span>
+        <span><i class="k-route"></i>Via stopover</span>
+        <span><i class="k-sel"></i>Selected</span>
+      </div>
+      <div class="tip" id="tip" hidden></div>
+    </section>
+
+    <section class="results" aria-label="Stopover options">
+      <div id="summary" class="summary" aria-live="polite"></div>
+      <ol id="list" class="list"></ol>
+      <p class="note">
+        Connections come from the <a href="https://openflights.org/data" rel="noopener">OpenFlights</a>
+        route database (2014, ODbL) — airlines add and drop routes, so check a current schedule before booking.
+        Flying times are rough estimates and leave out time on the ground.
+      </p>
+    </section>
+  </main>
+
+  <script>window.FSO_BUILD = '2026-09-26';</script>
+  <script src="map.js?v=2026-09-26"></script>
+  <script src="data.js?v=2026-09-26"></script>
+  <script src="app.js?v=2026-09-26"></script>
+</body>
+</html>

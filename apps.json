@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Flight Stopovers",
+      "description": "Pick a departure and arrival city and see every city you could connect through — one or two stops — drawn as routes on a world map.",
+      "path": "apps/flight-stopovers/",
+      "tags": ["travel", "flights", "map", "stopover", "layover", "routes", "airports"],
+      "emoji": "✈️"
+    },
+    {
       "title": "Baby's First Year",
       "description": "A week-by-week health and growth plan from birth to one year — feeding schedule and log, appointments, age-appropriate activities, growth charts and every milestone, kept on your device.",
       "path": "apps/baby-first-year/",
