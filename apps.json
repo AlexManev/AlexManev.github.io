@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Timber Cut Planner",
+      "description": "List the timber you have and the pieces you need — it works out which boards to cut for the least offcut, or which lengths to buy, and lets you tick off each cut as you go.",
+      "path": "apps/timber-cut-planner/",
+      "tags": ["diy", "timber", "wood", "cutting", "carpentry", "offcut", "calculator", "tool"],
+      "emoji": "🪚"
+    },
+    {
       "title": "Flight Stopovers",
       "description": "Pick a departure and arrival city and see every city you could connect through — one or two stops — drawn as routes on a world map.",
       "path": "apps/flight-stopovers/",

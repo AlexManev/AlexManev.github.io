@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timber Cut Planner</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f4ef;
+      --surface: #ffffff;
+      --surface-2: #f1ece4;
+      --border: #e3dbcf;
+      --text: #231d16;
+      --muted: #7a6d5d;
+      --accent: #b0602a;
+      --accent-text: #ffffff;
+      --wood: #e2b77f;
+      --wood-edge: #b98a52;
+      --wood-done: #8fbf7f;
+      --offcut: #d9d2c7;
+      --danger: #b3261e;
+      --ok: #2e7d32;
+      --warn-bg: #fff3dc;
+      --warn-text: #7a4b00;
+      --shadow: 0 1px 2px rgba(40, 24, 8, 0.06), 0 4px 16px rgba(40, 24, 8, 0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14110e;
+        --surface: #1e1a16;
+        --surface-2: #28221c;
+        --border: #3a3129;
+        --text: #efe7dc;
+        --muted: #a8998a;
+        --accent: #e0914f;
+        --accent-text: #1a120b;
+        --wood: #b8864c;
+        --wood-edge: #d9a86c;
+        --wood-done: #5f8f55;
+        --offcut: #3b342d;
+        --danger: #ff8a80;
+        --ok: #8bd48f;
+        --warn-bg: #3a2c12;
+        --warn-text: #ffd490;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 16px 16px 64px; }
+    a.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    a.back:hover { text-decoration: underline; }
+    h1 { font-size: 1.6rem; margin: 12px 0 4px; }
+    .lede { color: var(--muted); margin: 0 0 18px; }
+    h2 { font-size: 1.05rem; margin: 0 0 4px; }
+    .hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 12px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .seg { display: flex; background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+    .seg button {
+      flex: 1; border: 0; background: transparent; color: var(--muted);
+      padding: 10px 8px; border-radius: 9px; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+    .settings { display: flex; gap: 12px; flex-wrap: wrap; }
+    .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); flex: 1; min-width: 130px; }
+
+    input, select {
+      font: inherit; color: var(--text); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 9px; padding: 9px 10px; width: 100%; min-width: 0;
+    }
+    input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    input.bad { border-color: var(--danger); }
+
+    .rows { display: flex; flex-direction: column; gap: 8px; }
+    .row { display: grid; gap: 6px; align-items: center; }
+    .row.cut { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.6fr) minmax(0, 1.4fr) 36px; }
+    .row.stock { grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) 36px; }
+    .row-head { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 1.1rem; cursor: pointer;
+    }
+    .icon-btn:hover { color: var(--danger); border-color: var(--danger); }
+    .add {
+      margin-top: 10px; border: 1px dashed var(--border); background: transparent; color: var(--accent);
+      width: 100%; padding: 10px; border-radius: 9px; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .add:hover { border-color: var(--accent); }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+      padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+    .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+    .inline-add { display: flex; gap: 6px; margin-top: 10px; }
+    .inline-add input { flex: 1; }
+    .btn-small {
+      border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+      border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 0.9rem; cursor: pointer; white-space: nowrap;
+    }
+    .btn-small:hover { border-color: var(--accent); }
+    .linkish { background: none; border: 0; color: var(--accent); font: inherit; font-size: 0.85rem; cursor: pointer; padding: 0; margin-top: 8px; }
+
+    .primary {
+      width: 100%; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-size: 1.05rem; font-weight: 700;
+      background: var(--accent); color: var(--accent-text); cursor: pointer; margin: 4px 0 18px;
+    }
+    .primary:hover { filter: brightness(1.05); }
+
+    .errors { color: var(--danger); font-size: 0.9rem; margin: -8px 0 16px; }
+    .errors:empty { display: none; }
+    .banner { background: var(--warn-bg); color: var(--warn-text); border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; margin-bottom: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat { background: var(--surface-2); border-radius: 10px; padding: 10px; text-align: center; }
+    .stat b { display: block; font-size: 1.25rem; }
+    .stat span { font-size: 0.75rem; color: var(--muted); }
+    .list { margin: 6px 0 0; padding-left: 20px; }
+    .list li { margin: 2px 0; }
+    .sub { font-size: 0.9rem; font-weight: 600; margin: 12px 0 2px; }
+
+    .progress { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; font-size: 0.9rem; }
+    .progress .track { flex: 1; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+    .progress .fill { height: 100%; background: var(--ok); width: 0; transition: width 0.25s; }
+
+    .board { padding: 14px; }
+    .board.done { opacity: 0.6; }
+    .board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .board-head strong { font-size: 1rem; }
+    .tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 99px; margin-left: 6px; vertical-align: 2px; }
+    .tag.buy { background: var(--accent); color: var(--accent-text); }
+    .tag.have { background: var(--surface-2); color: var(--muted); }
+    .board-meta { color: var(--muted); font-size: 0.85rem; }
+
+    .bar { display: flex; height: 38px; border-radius: 6px; overflow: hidden; border: 1px solid var(--wood-edge); background: var(--offcut); }
+    .seg-piece {
+      border: 0; border-right: 2px solid var(--bg); background: var(--wood); color: #2b1a08;
+      font: inherit; font-size: 0.72rem; font-weight: 700; cursor: pointer; padding: 0 2px;
+      overflow: hidden; white-space: nowrap; text-overflow: clip; min-width: 3px;
+    }
+    .seg-piece.done { background: var(--wood-done); text-decoration: line-through; }
+    .seg-off {
+      background: repeating-linear-gradient(135deg, var(--offcut) 0 6px, transparent 6px 10px);
+      color: var(--muted); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap;
+    }
+    .cuts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .cut-chip {
+      display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+      border-radius: 999px; padding: 6px 12px 6px 8px; font: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+    .cut-chip .box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--muted); display: inline-grid; place-items: center; font-size: 0.75rem; }
+    .cut-chip[aria-pressed="true"] { color: var(--muted); text-decoration: line-through; }
+    .cut-chip[aria-pressed="true"] .box { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+    .cut-chip small { color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .empty { color: var(--muted); text-align: center; padding: 20px 0; }
+
+    @media (max-width: 420px) {
+      .row.cut { grid-template-columns: minmax(0, 1fr) minmax(0, 0.55fr) 36px; }
+      .row.cut .label-in { grid-column: 1 / 3; grid-row: 2; }
+      .row.cut .row-gap { display: none; }
+      .row-head .label-h { display: none; }
+      .rows .row.cut + .row.cut { border-top: 1px solid var(--border); padding-top: 8px; }
+      .stat b { font-size: 1.05rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="../../">← Back to home</a>
+  <h1>🪚 Timber Cut Planner</h1>
+  <p class="lede">List the pieces you need and the timber you have. It works out which boards to cut so you're left with the least offcut, or what lengths to buy. Tick pieces off as you cut them.</p>
+
+  <div class="seg" role="group" aria-label="Mode">
+    <button type="button" data-mode="stock">Use my timber</button>
+    <button type="button" data-mode="buy">Plan what to buy</button>
+  </div>
+
+  <section class="card">
+    <div class="settings">
+      <label>Units
+        <select id="unit">
+          <option value="mm">Millimetres (mm)</option>
+          <option value="cm">Centimetres (cm)</option>
+          <option value="m">Metres (m)</option>
+          <option value="in">Inches (in)</option>
+        </select>
+      </label>
+      <label>Saw blade width (kerf)
+        <input id="kerf" type="text" inputmode="decimal" autocomplete="off" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Pieces I need</h2>
+    <p class="hint">Finished lengths. The label is optional, e.g. "stud" or "rail".</p>
+    <div class="rows" id="cutRows"></div>
+    <button type="button" class="add" id="addCut">+ Add piece</button>
+  </section>
+
+  <section class="card" id="stockCard">
+    <h2>Timber I have</h2>
+    <p class="hint">Lengths you already own and how many of each.</p>
+    <div class="rows" id="stockRows"></div>
+    <button type="button" class="add" id="addStock">+ Add length</button>
+  </section>
+
+  <section class="card">
+    <h2>Lengths I can buy</h2>
+    <p class="hint" id="buyHint"></p>
+    <div class="chips" id="buyChips"></div>
+    <div class="inline-add">
+      <input id="buyNew" type="text" inputmode="decimal" placeholder="Other length" autocomplete="off" />
+      <button type="button" class="btn-small" id="buyAdd">Add</button>
+    </div>
+    <button type="button" class="linkish" id="buyReset">Reset to standard lengths</button>
+  </section>
+
+  <button type="button" class="primary" id="calc">Work out the cuts</button>
+  <div class="errors" id="errors" role="alert"></div>
+
+  <section id="results" aria-live="polite"></section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- units ----------
+  // Lengths are solved in integer "ticks": 1 mm for metric units, 1/16" for inches.
+  var UNITS = {
+    mm: { per: 1, mm: 1, sys: 'metric', kerf: '3' },
+    cm: { per: 10, mm: 10, sys: 'metric', kerf: '0.3' },
+    m:  { per: 1000, mm: 1000, sys: 'metric', kerf: '0.003' },
+    in: { per: 16, mm: 25.4, sys: 'imperial', kerf: '1/8' }
+  };
+  var METRIC_BUY = [1800, 2400, 2700, 3000, 3600, 4200, 4800, 5400, 6000];
+  var IMPERIAL_BUY = [96, 120, 144, 168, 192, 240].map(function (i) { return i * 25.4; });
+
+  // Accepts "900", "2.4", "23 1/2", "23-1/2", "1/8".
+  function parseLen(str) {
+    var s = String(str == null ? '' : str).trim().replace(',', '.');
+    if (!s) return NaN;
+    var m = s.match(/^(\d+(?:\.\d+)?)?(?:[\s-]+)?(?:(\d+)\/(\d+))?$/);
+    if (!m || (!m[1] && !m[2])) return NaN;
+    var v = m[1] ? parseFloat(m[1]) : 0;
+    if (m[2]) { var d = parseFloat(m[3]); if (!d) return NaN; v += parseFloat(m[2]) / d; }
+    return v;
+  }
+  function toTicks(str, unit) {
+    var v = parseLen(str);
+    return isFinite(v) ? Math.round(v * UNITS[unit].per) : NaN;
+  }
+  function mmToTicks(mm, unit) { return Math.round(mm / UNITS[unit].mm * UNITS[unit].per); }
+  function inchStr(x) {
+    var sixteenths = Math.round(x * 16), whole = Math.floor(sixteenths / 16), n = sixteenths % 16, d = 16;
+    if (!n) return String(whole);
+    while (n % 2 === 0) { n /= 2; d /= 2; }
+    return (whole ? whole + ' ' : '') + n + '/' + d;
+  }
+  function trim(n, dp) { return String(+n.toFixed(dp)); }
+  // Number only, in the given unit.
+  function num(ticks, unit) {
+    if (unit === 'in') return inchStr(ticks / 16);
+    if (unit === 'cm') return trim(ticks / 10, 1);
+    if (unit === 'm') return trim(ticks / 1000, 3);
+    return String(ticks);
+  }
+  function fmt(ticks, unit) { return num(ticks, unit) + (unit === 'in' ? '"' : ' ' + unit); }
+  function convertStr(str, from, to) {
+    var v = parseLen(str);
+    if (!isFinite(v)) return str;
+    var t = v * UNITS[from].mm / UNITS[to].mm;
+    if (to === 'in') return inchStr(t);
+    if (to === 'mm') return trim(t, 1);
+    if (to === 'cm') return trim(t, 2);
+    return trim(t, 4);
+  }
+
+  // ---------- state ----------
+  var KEY = 'timber-cut-planner-v1';
+  var memory = null;
+  function load() {
+    try { var raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+    return memory;
+  }
+  function save() {
+    memory = JSON.parse(JSON.stringify(state));
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function defaultBuy(sys) {
+    return (sys === 'imperial' ? IMPERIAL_BUY : METRIC_BUY).map(function (mm) { return { mm: mm, on: true }; });
+  }
+  var state = load() || {
+    unit: 'mm', kerf: '3', mode: 'stock',
+    cuts: [{ len: '', qty: '1', label: '' }],
+    stock: [{ len: '', qty: '1' }],
+    buy: defaultBuy('metric'), buyCustom: false,
+    plan: null
+  };
+
+  function signature() {
+    return JSON.stringify([state.unit, state.kerf, state.mode, state.cuts, state.mode === 'stock' ? state.stock : null,
+      state.buy.filter(function (b) { return b.on; }).map(function (b) { return Math.round(b.mm * 100); })]);
+  }
+
+  // ---------- solver ----------
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // Best subset of grouped pieces whose total weight fits `cap` (bounded subset-sum).
+  // groups: [{w, count}] -> returns {sum, take: [count per group]}
+  function knapsack(groups, cap) {
+    var items = [];
+    groups.forEach(function (g, gi) {
+      var k = g.count, b = 1;
+      while (k > 0) { var t = Math.min(b, k); if (g.w * t <= cap) items.push({ gi: gi, n: t, w: g.w * t }); k -= t; b *= 2; }
+    });
+    var from = new Int32Array(cap + 1).fill(-1);
+    from[0] = items.length;
+    var best = 0;
+    for (var i = 0; i < items.length && best < cap; i++) {
+      var w = items[i].w;
+      for (var c = cap; c >= w; c--) {
+        if (from[c] === -1 && from[c - w] !== -1) { from[c] = i; if (c > best) best = c; }
+      }
+    }
+    var take = groups.map(function () { return 0; }), s = best;
+    while (s > 0) { var it = items[from[s]]; take[it.gi] += it.n; s -= it.w; }
+    return { sum: best, take: take };
+  }
+
+  function boardWeight(b, kerf) { return b.pieces.reduce(function (a, p) { return a + p.len + kerf; }, 0); }
+
+  // Repeatedly pick the stock length + subset of pieces that fills a board best.
+  function knapGreedy(pieces, stock, kerf, mode) {
+    var avail = stock.map(function (s) { return { len: s.len, qty: s.qty }; });
+    var byLen = {};
+    pieces.forEach(function (p) { (byLen[p.len] = byLen[p.len] || []).push(p); });
+    var boards = [];
+    for (;;) {
+      var lens = Object.keys(byLen).filter(function (l) { return byLen[l].length; }).map(Number).sort(function (a, b) { return b - a; });
+      if (!lens.length) break;
+      var groups = lens.map(function (l) { return { w: l + kerf, count: byLen[l].length }; });
+      var best = null;
+      avail.forEach(function (s) {
+        if (s.qty <= 0) return;
+        var cap = s.len + kerf, r = knapsack(groups, cap);
+        if (!r.sum) return;
+        var score = mode === 'ratio' ? r.sum / cap : -(cap - r.sum);
+        if (!best || score > best.score + 1e-9 || (Math.abs(score - best.score) <= 1e-9 && s.len > best.s.len)) best = { s: s, r: r, score: score };
+      });
+      if (!best) break;
+      best.s.qty--;
+      var bp = [];
+      lens.forEach(function (l, i) { for (var k = 0; k < best.r.take[i]; k++) bp.push(byLen[l].pop()); });
+      boards.push({ len: best.s.len, pieces: bp });
+    }
+    var unplaced = [];
+    Object.keys(byLen).forEach(function (l) { unplaced = unplaced.concat(byLen[l]); });
+    return { boards: boards, unplaced: unplaced };
+  }
+
+  // Best-fit decreasing: drop each piece in the tightest open board, else open a new one.
+  function bfd(order, stock, kerf, open) {
+    var avail = stock.map(function (s) { return { len: s.len, qty: s.qty }; });
+    var boards = [], unplaced = [];
+    order.forEach(function (p) {
+      var w = p.len + kerf, bestB = null, bestFree = Infinity;
+      boards.forEach(function (b) {
+        var free = b.len + kerf - b.used;
+        if (free >= w && free - w < bestFree) { bestFree = free - w; bestB = b; }
+      });
+      if (!bestB) {
+        var s = null;
+        avail.forEach(function (a) {
+          if (a.qty <= 0 || a.len + kerf < w) return;
+          if (!s || (open === 'largest' ? a.len > s.len : a.len < s.len)) s = a;
+        });
+        if (!s) { unplaced.push(p); return; }
+        s.qty--;
+        bestB = { len: s.len, pieces: [], used: 0 };
+        boards.push(bestB);
+      }
+      bestB.pieces.push(p); bestB.used += w;
+    });
+    return { boards: boards, unplaced: unplaced };
+  }
+
+  // Swap boards for shorter unused stock when their pieces still fit.
+  function downsize(sol, stock, kerf) {
+    var avail = {};
+    stock.forEach(function (s) { avail[s.len] = (avail[s.len] || 0) + s.qty; });
+    sol.boards.forEach(function (b) { avail[b.len]--; });
+    var lens = Object.keys(avail).map(Number).sort(function (a, b) { return a - b; });
+    var changed = true;
+    while (changed) {
+      changed = false;
+      sol.boards.forEach(function (b) {
+        var need = boardWeight(b, kerf);
+        for (var i = 0; i < lens.length && lens[i] < b.len; i++) {
+          if (avail[lens[i]] > 0 && lens[i] + kerf >= need) {
+            avail[lens[i]]--; avail[b.len]++; b.len = lens[i]; changed = true; break;
+          }
+        }
+      });
+    }
+    return sol;
+  }
+
+  function offcut(b, kerf) {
+    var sum = b.pieces.reduce(function (a, p) { return a + p.len; }, 0);
+    return Math.max(0, b.len - sum - kerf * b.pieces.length);
+  }
+
+  function scoreOf(sol, kerf) {
+    var un = sol.unplaced.reduce(function (a, p) { return a + p.len; }, 0);
+    var total = sol.boards.reduce(function (a, b) { return a + b.len; }, 0);
+    var maxOff = sol.boards.reduce(function (a, b) { return Math.max(a, offcut(b, kerf)); }, 0);
+    return [un, total, sol.boards.length, -maxOff];
+  }
+  function better(a, b) {
+    for (var i = 0; i < a.length; i++) { if (a[i] !== b[i]) return a[i] < b[i]; }
+    return false;
+  }
+
+  function solve(pieces, stock, kerf) {
+    stock = stock.filter(function (s) { return s.qty > 0 && s.len > 0; });
+    var maxL = stock.reduce(function (a, s) { return Math.max(a, s.len); }, 0);
+    var fit = pieces.filter(function (p) { return p.len <= maxL; });
+    var tooLong = pieces.filter(function (p) { return p.len > maxL; });
+    var desc = fit.slice().sort(function (a, b) { return b.len - a.len; });
+    var cands = [knapGreedy(fit, stock, kerf, 'ratio'), knapGreedy(fit, stock, kerf, 'waste')];
+    var rnd = mulberry32(20260926);
+    ['largest', 'smallest'].forEach(function (open) {
+      cands.push(bfd(desc, stock, kerf, open));
+      for (var i = 0; i < 40; i++) {
+        var order = fit.map(function (p) { return { p: p, k: p.len * (1 + 0.35 * rnd()) }; })
+          .sort(function (a, b) { return b.k - a.k; }).map(function (x) { return x.p; });
+        cands.push(bfd(order, stock, kerf, open));
+      }
+    });
+    var best = null, bestScore = null;
+    cands.forEach(function (c) {
+      downsize(c, stock, kerf);
+      var sc = scoreOf(c, kerf);
+      if (!best || better(sc, bestScore)) { best = c; bestScore = sc; }
+    });
+    best.unplaced = best.unplaced.concat(tooLong);
+    return best;
+  }
+
+  // ---------- rendering: inputs ----------
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'text') n.textContent = attrs[k];
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function unitLabel() { return state.unit === 'in' ? 'in' : state.unit; }
+
+  function lenInput(obj, key, placeholder) {
+    return el('input', {
+      type: 'text', inputmode: 'decimal', autocomplete: 'off', value: obj[key], placeholder: placeholder,
+      'aria-label': placeholder,
+      oninput: function (e) { obj[key] = e.target.value; e.target.classList.remove('bad'); save(); markStale(); }
+    });
+  }
+
+  function renderRows() {
+    var u = unitLabel();
+    var cr = $('cutRows'); cr.innerHTML = '';
+    cr.appendChild(el('div', { class: 'row cut row-head' }, [
+      el('span', { text: 'Length (' + u + ')' }), el('span', { text: 'Qty' }), el('span', { class: 'label-h', text: 'Label' }), el('span', { class: 'row-gap' })
+    ]));
+    state.cuts.forEach(function (c, i) {
+      var lab = lenInput(c, 'label', 'Label (optional)');
+      lab.setAttribute('inputmode', 'text'); lab.classList.add('label-in');
+      cr.appendChild(el('div', { class: 'row cut' }, [
+        lenInput(c, 'len', 'Length'),
+        numInput(c),
+        lab,
+        el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove piece', text: '×', onclick: function () {
+          state.cuts.splice(i, 1);
+          if (!state.cuts.length) state.cuts.push({ len: '', qty: '1', label: '' });
+          save(); renderRows(); markStale();
+        } })
+      ]));
+    });
+
+    var sr = $('stockRows'); sr.innerHTML = '';
+    sr.appendChild(el('div', { class: 'row stock row-head' }, [
+      el('span', { text: 'Length (' + u + ')' }), el('span', { text: 'Qty' }), el('span')
+    ]));
+    state.stock.forEach(function (s, i) {
+      sr.appendChild(el('div', { class: 'row stock' }, [
+        lenInput(s, 'len', 'Length'),
+        numInput(s),
+        el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove length', text: '×', onclick: function () {
+          state.stock.splice(i, 1);
+          if (!state.stock.length) state.stock.push({ len: '', qty: '1' });
+          save(); renderRows(); markStale();
+        } })
+      ]));
+    });
+  }
+  function numInput(obj) {
+    return el('input', {
+      type: 'number', inputmode: 'numeric', min: '1', step: '1', value: obj.qty, 'aria-label': 'Quantity',
+      oninput: function (e) { obj.qty = e.target.value; e.target.classList.remove('bad'); save(); markStale(); }
+    });
+  }
+
+  function renderBuy() {
+    var box = $('buyChips'); box.innerHTML = '';
+    state.buy.sort(function (a, b) { return a.mm - b.mm; });
+    state.buy.forEach(function (b) {
+      var t = mmToTicks(b.mm, state.unit);
+      box.appendChild(el('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(b.on), text: fmt(t, state.unit),
+        onclick: function () { b.on = !b.on; state.buyCustom = true; save(); renderBuy(); markStale(); }
+      }));
+    });
+    $('buyHint').textContent = state.mode === 'stock'
+      ? 'Only used if your own timber runs short. Tap to switch a length on or off.'
+      : 'Tap to switch lengths your supplier stocks on or off.';
+    $('buyNew').placeholder = 'Other length (' + unitLabel() + ')';
+  }
+
+  function renderMode() {
+    document.querySelectorAll('.seg button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode));
+    });
+    $('stockCard').hidden = state.mode !== 'stock';
+    renderBuy();
+  }
+
+  // ---------- rendering: plan ----------
+  function markStale() {
+    var banner = $('staleBanner');
+    if (banner) banner.hidden = !state.plan || state.plan.sig === signature();
+  }
+
+  function countDone(plan) {
+    var done = 0, total = 0;
+    plan.boards.forEach(function (b) { b.pieces.forEach(function (p) { total++; if (p.done) done++; }); });
+    return { done: done, total: total };
+  }
+
+  function groupLens(list, unit) {
+    var m = {};
+    list.forEach(function (x) { m[x.len] = (m[x.len] || 0) + (x.qty || 1); });
+    return Object.keys(m).map(Number).sort(function (a, b) { return b - a; })
+      .map(function (l) { return m[l] + ' × ' + fmt(l, unit); });
+  }
+
+  function renderPlan() {
+    var res = $('results'); res.innerHTML = '';
+    var plan = state.plan;
+    if (!plan) return;
+    var u = plan.unit;
+
+    res.appendChild(el('div', { class: 'banner', id: 'staleBanner', text: 'You\'ve changed the inputs since this plan was made. Tap "Work out the cuts" to update it.' }));
+
+    // Summary
+    var totalLen = 0, totalOff = 0, totalPieces = 0;
+    plan.boards.forEach(function (b) {
+      totalLen += b.len; totalOff += b.offcut;
+      b.pieces.forEach(function (p) { totalPieces += p.len; });
+    });
+    var eff = totalLen ? Math.round(totalPieces / totalLen * 1000) / 10 : 0;
+    var summary = el('div', { class: 'card' }, [
+      el('h2', { text: 'Plan' }),
+      el('div', { class: 'stats' }, [
+        el('div', { class: 'stat' }, [el('b', { text: String(plan.boards.length) }), el('span', { text: plan.boards.length === 1 ? 'board' : 'boards' })]),
+        el('div', { class: 'stat' }, [el('b', { text: fmt(totalOff, u) }), el('span', { text: 'total offcut' })]),
+        el('div', { class: 'stat' }, [el('b', { text: eff + '%' }), el('span', { text: 'timber used' })])
+      ])
+    ]);
+    var have = plan.boards.filter(function (b) { return !b.buy; });
+    var buy = plan.boards.filter(function (b) { return b.buy; });
+    if (buy.length) {
+      summary.appendChild(el('p', { class: 'sub', text: '🛒 Buy' }));
+      summary.appendChild(el('ul', { class: 'list' }, groupLens(buy, u).map(function (t) { return el('li', { text: t }); })));
+    }
+    if (have.length) {
+      summary.appendChild(el('p', { class: 'sub', text: 'From your timber' }));
+      summary.appendChild(el('ul', { class: 'list' }, groupLens(have, u).map(function (t) { return el('li', { text: t }); })));
+    }
+    if (plan.spare && plan.spare.length) {
+      summary.appendChild(el('p', { class: 'sub', text: 'Left untouched' }));
+      summary.appendChild(el('ul', { class: 'list' }, groupLens(plan.spare, u).map(function (t) { return el('li', { text: t }); })));
+    }
+    if (plan.unplaced.length) {
+      var un = {};
+      plan.unplaced.forEach(function (p) { var k = p.len + '|' + (p.label || ''); un[k] = un[k] || { len: p.len, label: p.label, n: 0 }; un[k].n++; });
+      summary.appendChild(el('div', { class: 'banner', text:
+        '⚠️ Couldn\'t fit: ' + Object.keys(un).map(function (k) { var x = un[k]; return x.n + ' × ' + fmt(x.len, u) + (x.label ? ' (' + x.label + ')' : ''); }).join(', ') +
+        (plan.mode === 'stock' ? '. Add more timber or switch on longer buy lengths.' : '. Switch on a longer buy length.') }));
+    }
+    if (plan.kerf) summary.appendChild(el('p', { class: 'hint', text: 'Allows ' + fmt(plan.kerf, u) + ' for each saw cut.' }));
+    res.appendChild(summary);
+
+    if (!plan.boards.length) { markStale(); return; }
+
+    // Progress + boards
+    var cnt = countDone(plan);
+    var fill = el('div', { class: 'fill' });
+    fill.style.width = (cnt.total ? cnt.done / cnt.total * 100 : 0) + '%';
+    res.appendChild(el('div', { class: 'progress' }, [
+      el('span', { text: cnt.done === cnt.total ? '✅ All ' + cnt.total + ' cuts done' : cnt.done + ' of ' + cnt.total + ' cuts done' }),
+      el('div', { class: 'track' }, [fill])
+    ]));
+    res.appendChild(el('div', { class: 'toolbar' }, [
+      el('button', { type: 'button', class: 'btn-small', text: 'Clear ticks', onclick: function () {
+        plan.boards.forEach(function (b) { b.pieces.forEach(function (p) { p.done = false; }); });
+        save(); renderPlan();
+      } })
+    ]));
+
+    plan.boards.forEach(function (b, bi) {
+      var done = b.pieces.every(function (p) { return p.done; });
+      var bar = el('div', { class: 'bar', role: 'img', 'aria-label': 'Board layout' });
+      b.pieces.forEach(function (p) {
+        var s = el('button', {
+          type: 'button', class: 'seg-piece' + (p.done ? ' done' : ''), title: fmt(p.len, u) + (p.label ? ' – ' + p.label : ''),
+          text: num(p.len, u), 'aria-hidden': 'true', tabindex: '-1',
+          onclick: function () { toggle(p); }
+        });
+        s.style.flex = '0 0 ' + (p.len / b.len * 100) + '%';
+        bar.appendChild(s);
+      });
+      if (b.offcut > 0) {
+        var off = el('div', { class: 'seg-off', text: num(b.offcut, u) });
+        off.style.flex = '1 1 auto';
+        bar.appendChild(off);
+      }
+      var chips = el('div', { class: 'cuts' }, b.pieces.map(function (p) {
+        return el('button', {
+          type: 'button', class: 'cut-chip', 'aria-pressed': String(!!p.done), onclick: function () { toggle(p); }
+        }, [el('span', { class: 'box', text: p.done ? '✓' : '' }), el('span', { text: fmt(p.len, u) }), p.label ? el('small', { text: p.label }) : null]);
+      }));
+      res.appendChild(el('div', { class: 'card board' + (done ? ' done' : '') }, [
+        el('div', { class: 'board-head' }, [
+          el('div', {}, [
+            el('strong', { text: 'Board ' + (bi + 1) + ' · ' + fmt(b.len, u) }),
+            el('span', { class: 'tag ' + (b.buy ? 'buy' : 'have'), text: b.buy ? 'buy' : 'have' })
+          ]),
+          el('span', { class: 'board-meta', text: b.offcut > 0 ? 'offcut ' + fmt(b.offcut, u) : 'no offcut' })
+        ]),
+        bar,
+        chips,
+        el('button', { type: 'button', class: 'linkish', text: done ? 'Untick all on this board' : 'Tick all on this board', onclick: function () {
+          b.pieces.forEach(function (p) { p.done = !done; }); save(); renderPlan();
+        } })
+      ]));
+    });
+    markStale();
+  }
+
+  function toggle(p) { p.done = !p.done; save(); renderPlan(); }
+
+  // ---------- calculate ----------
+  function calculate() {
+    var errs = [], unit = state.unit;
+    document.querySelectorAll('input.bad').forEach(function (i) { i.classList.remove('bad'); });
+    var kerf = state.kerf.trim() === '' ? 0 : toTicks(state.kerf, unit);
+    if (!isFinite(kerf) || kerf < 0) { errs.push('Blade width must be a number (use 0 to ignore it).'); $('kerf').classList.add('bad'); }
+
+    var rowsCut = document.querySelectorAll('#cutRows .row:not(.row-head)');
+    var pieces = [];
+    state.cuts.forEach(function (c, i) {
+      if (!c.len.trim() && !c.label.trim()) return;
+      var t = toTicks(c.len, unit), q = parseInt(c.qty, 10);
+      var ins = rowsCut[i] ? rowsCut[i].querySelectorAll('input') : [];
+      if (!(t > 0)) { errs.push('Piece ' + (i + 1) + ': enter a length.'); if (ins[0]) ins[0].classList.add('bad'); return; }
+      if (!(q > 0)) { errs.push('Piece ' + (i + 1) + ': quantity must be 1 or more.'); if (ins[1]) ins[1].classList.add('bad'); return; }
+      for (var k = 0; k < q; k++) pieces.push({ len: t, label: c.label.trim() });
+    });
+    if (!pieces.length && !errs.length) errs.push('Add at least one piece you need.');
+    if (pieces.length > 1500) errs.push('That\'s a lot of pieces — keep it under 1500.');
+
+    var stock = [];
+    if (state.mode === 'stock') {
+      var rowsStock = document.querySelectorAll('#stockRows .row:not(.row-head)');
+      state.stock.forEach(function (s, i) {
+        if (!s.len.trim()) return;
+        var t = toTicks(s.len, unit), q = parseInt(s.qty, 10);
+        var ins = rowsStock[i] ? rowsStock[i].querySelectorAll('input') : [];
+        if (!(t > 0)) { errs.push('Timber ' + (i + 1) + ': enter a length.'); if (ins[0]) ins[0].classList.add('bad'); return; }
+        if (!(q > 0)) { errs.push('Timber ' + (i + 1) + ': quantity must be 1 or more.'); if (ins[1]) ins[1].classList.add('bad'); return; }
+        var same = stock.filter(function (x) { return x.len === t; })[0];
+        if (same) same.qty += q; else stock.push({ len: t, qty: q });
+      });
+    }
+    var buy = [];
+    state.buy.forEach(function (b) {
+      if (!b.on) return;
+      var t = mmToTicks(b.mm, unit);
+      if (t > 0 && !buy.some(function (x) { return x.len === t; })) buy.push({ len: t, qty: Infinity });
+    });
+    if (state.mode === 'buy' && !buy.length) errs.push('Switch on at least one length you can buy.');
+    if (state.mode === 'stock' && !stock.length && !buy.length) errs.push('Add the timber you have, or switch on some buy lengths.');
+
+    $('errors').textContent = errs.join(' ');
+    if (errs.length) return;
+
+    if (state.plan && state.plan.sig !== signature()) {
+      var c = countDone(state.plan);
+      if (c.done && !confirm('This makes a new plan and clears your ' + c.done + ' ticked cut' + (c.done === 1 ? '' : 's') + '. Continue?')) return;
+    }
+
+    var boards = [], unplaced = pieces, spare = [];
+    if (state.mode === 'stock' && stock.length) {
+      var s1 = solve(pieces, stock, kerf);
+      boards = s1.boards.map(function (b) { return { len: b.len, pieces: b.pieces, buy: false }; });
+      unplaced = s1.unplaced;
+      var used = {};
+      boards.forEach(function (b) { used[b.len] = (used[b.len] || 0) + 1; });
+      stock.forEach(function (s) {
+        var left = s.qty - (used[s.len] || 0);
+        if (left > 0) spare.push({ len: s.len, qty: left });
+      });
+    }
+    if (unplaced.length && buy.length) {
+      var s2 = solve(unplaced, buy, kerf);
+      boards = boards.concat(s2.boards.map(function (b) { return { len: b.len, pieces: b.pieces, buy: true }; }));
+      unplaced = s2.unplaced;
+    }
+    boards.forEach(function (b) {
+      b.pieces.sort(function (x, y) { return y.len - x.len; });
+      b.pieces = b.pieces.map(function (p) { return { len: p.len, label: p.label, done: false }; });
+      b.offcut = offcut(b, kerf);
+    });
+    // Your own boards first, then fullest boards first.
+    boards.sort(function (a, b) { return (a.buy - b.buy) || (a.offcut - b.offcut) || (b.len - a.len); });
+
+    state.plan = { sig: signature(), unit: unit, kerf: kerf, mode: state.mode, boards: boards, unplaced: unplaced, spare: spare };
+    save();
+    renderPlan();
+    $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  // ---------- wiring ----------
+  $('unit').value = state.unit;
+  $('kerf').value = state.kerf;
+  $('unit').addEventListener('change', function (e) {
+    var from = state.unit, to = e.target.value;
+    state.cuts.forEach(function (c) { c.len = convertStr(c.len, from, to); });
+    state.stock.forEach(function (s) { s.len = convertStr(s.len, from, to); });
+    state.kerf = state.kerf === UNITS[from].kerf ? UNITS[to].kerf : convertStr(state.kerf, from, to);
+    if (!state.buyCustom && UNITS[from].sys !== UNITS[to].sys) state.buy = defaultBuy(UNITS[to].sys);
+    state.unit = to;
+    $('kerf').value = state.kerf;
+    save(); renderRows(); renderBuy(); markStale();
+  });
+  $('kerf').addEventListener('input', function (e) { state.kerf = e.target.value; e.target.classList.remove('bad'); save(); markStale(); });
+  $('addCut').addEventListener('click', function () {
+    state.cuts.push({ len: '', qty: '1', label: '' }); save(); renderRows();
+    var ins = document.querySelectorAll('#cutRows .row:last-child input'); if (ins[0]) ins[0].focus();
+  });
+  $('addStock').addEventListener('click', function () {
+    state.stock.push({ len: '', qty: '1' }); save(); renderRows();
+    var ins = document.querySelectorAll('#stockRows .row:last-child input'); if (ins[0]) ins[0].focus();
+  });
+  function addBuy() {
+    var v = parseLen($('buyNew').value);
+    if (!(v > 0)) { $('buyNew').classList.add('bad'); return; }
+    var mm = v * UNITS[state.unit].mm;
+    var t = mmToTicks(mm, state.unit);
+    var existing = state.buy.filter(function (b) { return mmToTicks(b.mm, state.unit) === t; })[0];
+    if (existing) existing.on = true; else state.buy.push({ mm: mm, on: true });
+    state.buyCustom = true;
+    $('buyNew').value = ''; $('buyNew').classList.remove('bad');
+    save(); renderBuy(); markStale();
+  }
+  $('buyAdd').addEventListener('click', addBuy);
+  $('buyNew').addEventListener('keydown', function (e) { if (e.key === 'Enter') addBuy(); });
+  $('buyReset').addEventListener('click', function () {
+    state.buy = defaultBuy(UNITS[state.unit].sys); state.buyCustom = false; save(); renderBuy(); markStale();
+  });
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () { state.mode = b.dataset.mode; save(); renderMode(); markStale(); });
+  });
+  $('calc').addEventListener('click', calculate);
+
+  renderRows();
+  renderMode();
+  renderPlan();
+
+  // Exposed for quick console checks.
+  window.TimberSolver = { solve: solve, parseLen: parseLen };
+})();
+</script>
+</body>
+</html>
