@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Home Workout Ideas",
+      "description": "Pick a body part and the exact area you want to hit — upper chest, lats, inner biceps, quads, hamstrings — and get every exercise you can do with a barbell, dumbbells, an adjustable bench or bodyweight.",
+      "path": "apps/home-workouts/",
+      "tags": ["fitness", "workout", "gym", "exercise", "home gym", "barbell", "dumbbell", "strength", "training"],
+      "emoji": "🏋️"
+    },
+    {
       "title": "Timber Cut Planner",
       "description": "List the timber you have and the pieces you need — it works out which boards to cut for the least offcut, or which lengths to buy, and lets you tick off each cut as you go.",
       "path": "apps/timber-cut-planner/",

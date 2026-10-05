@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Workout Ideas</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface-2: #eceef2;
+      --border: #dde1e8;
+      --text: #161a22;
+      --muted: #646d7c;
+      --accent: #e0482f;
+      --accent-soft: #fde6e1;
+      --accent-text: #ffffff;
+      --primary-chip: #1f6feb;
+      --primary-soft: #e3edfd;
+      --star: #e3a008;
+      --shadow: 0 1px 2px rgba(10, 20, 40, 0.06), 0 4px 16px rgba(10, 20, 40, 0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1116;
+        --surface: #181b22;
+        --surface-2: #222631;
+        --border: #2e3340;
+        --text: #e8ebf1;
+        --muted: #98a1b0;
+        --accent: #ff7a5c;
+        --accent-soft: #3a1f19;
+        --accent-text: #1a0c08;
+        --primary-chip: #79a8ff;
+        --primary-soft: #1b2a45;
+        --star: #f5c542;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    main { max-width: 820px; margin: 0 auto; padding: 16px 16px 64px; }
+    a.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    a.back:hover { text-decoration: underline; }
+    h1 { font-size: 1.6rem; margin: 12px 0 4px; }
+    .lede { color: var(--muted); margin: 0 0 16px; }
+    .label {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted); margin: 18px 0 8px;
+    }
+
+    /* Body part picker */
+    .parts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      gap: 8px;
+    }
+    .part {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      border-radius: 14px; padding: 10px 6px; font: inherit; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      box-shadow: var(--shadow);
+    }
+    .part .em { font-size: 1.5rem; line-height: 1.2; }
+    .part .nm { font-size: 0.85rem; font-weight: 600; }
+    .part[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 0.9rem;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .chip .n { color: var(--muted); font-size: 0.8rem; }
+    .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    .chip[aria-pressed="true"] .n { color: inherit; opacity: 0.8; }
+    .area-hint { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; min-height: 1.2em; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+    .search {
+      flex: 1 1 200px; min-width: 0; padding: 10px 14px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit;
+    }
+    .btn {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      border-radius: 12px; padding: 10px 14px; font: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+    .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
+
+    .summary { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 18px 0 10px; }
+    .summary .count { font-weight: 600; }
+    .summary .reset { background: none; border: 0; color: var(--accent); font: inherit; font-size: 0.9rem; cursor: pointer; padding: 0; }
+
+    /* Exercise cards */
+    .list { display: grid; gap: 10px; }
+    .ex {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .ex-head {
+      display: flex; gap: 10px; align-items: flex-start; padding: 14px 14px 12px;
+      cursor: pointer; width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left;
+    }
+    .ex-main { flex: 1; min-width: 0; }
+    .ex-name { font-weight: 650; font-size: 1rem; margin: 0 0 6px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tag {
+      font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;
+      background: var(--surface-2); color: var(--muted); white-space: nowrap;
+    }
+    .tag.hit { background: var(--primary-soft); color: var(--primary-chip); font-weight: 600; }
+    .tag.eq { background: transparent; border: 1px solid var(--border); }
+    .tag.bench { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .star {
+      background: none; border: 0; font-size: 1.3rem; line-height: 1; cursor: pointer;
+      color: var(--muted); padding: 2px 4px;
+    }
+    .star[aria-pressed="true"] { color: var(--star); }
+    .chev { color: var(--muted); transition: transform 0.15s; padding-top: 2px; }
+    .ex.open .chev { transform: rotate(90deg); }
+    .ex-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--border); }
+    .ex.open .ex-body { display: block; }
+    .ex-body ul { margin: 12px 0 0; padding-left: 20px; }
+    .ex-body li { margin: 4px 0; }
+    .ex-body .note { margin: 10px 0 0; font-size: 0.88rem; color: var(--muted); }
+    .ex-body .level { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); }
+
+    .empty { text-align: center; color: var(--muted); padding: 32px 12px; }
+    footer { margin-top: 28px; color: var(--muted); font-size: 0.8rem; }
+
+    @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="../../">← Back to home</a>
+  <h1>🏋️ Home Workout Ideas</h1>
+  <p class="lede">Pick a body part, then narrow it to the exact area you want to hit. Every exercise here works with a barbell, dumbbells, an adjustable bench (−15° to 90°) or just bodyweight.</p>
+
+  <div class="label">Body part</div>
+  <div class="parts" id="parts"></div>
+
+  <div class="label" id="areaLabel">Target area</div>
+  <div class="chips" id="areas"></div>
+  <p class="area-hint" id="areaHint"></p>
+
+  <div class="label">Equipment I'm using today</div>
+  <div class="chips" id="equip"></div>
+
+  <div class="toolbar">
+    <input class="search" id="search" type="search" placeholder="Search exercises…" autocomplete="off" />
+    <button class="btn" id="savedBtn" aria-pressed="false">★ Saved</button>
+    <button class="btn" id="pickBtn">🎲 Pick 5 for me</button>
+  </div>
+  <div class="toolbar">
+    <label class="switch"><input type="checkbox" id="mainOnly" /> Only show where it's the main target</label>
+  </div>
+
+  <div class="summary">
+    <span class="count" id="count"></span>
+    <button class="reset" id="showAll" hidden>Show all</button>
+  </div>
+  <div class="list" id="list"></div>
+
+  <footer>Tap an exercise for form cues and bench angle. Stars are saved on this device only.</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Equipment ---------------------------------------------------------
+  // B = barbell, D = dumbbells, N = adjustable bench, W = bodyweight / nothing.
+  var EQUIP = [
+    { id: 'B', label: 'Barbell', emoji: '🏋️' },
+    { id: 'D', label: 'Dumbbells', emoji: '💪' },
+    { id: 'N', label: 'Bench', emoji: '🪑' },
+    { id: 'W', label: 'Bodyweight', emoji: '🤸' }
+  ];
+  var EQUIP_NAME = { B: 'Barbell', D: 'Dumbbells', N: 'Bench', W: 'Bodyweight' };
+
+  // ---- Body parts and their target areas ---------------------------------
+  var PARTS = [
+    { id: 'chest', name: 'Chest', emoji: '🫁', areas: [
+      { id: 'upper', name: 'Upper chest', hint: 'Clavicular head — incline presses and flys (15–45°).' },
+      { id: 'mid', name: 'Mid chest', hint: 'The bulk of the pec — flat presses, flys and push-ups.' },
+      { id: 'lower', name: 'Lower chest', hint: 'Lower sternal fibres — decline angles and pressing down-and-forward.' },
+      { id: 'inner', name: 'Inner chest', hint: 'Centre line — squeeze presses, narrow grips and full-contraction flys.' }
+    ]},
+    { id: 'back', name: 'Back', emoji: '🦅', areas: [
+      { id: 'lats', name: 'Lats (width)', hint: 'Rows pulling elbows to the hip, pullovers — builds the V-taper.' },
+      { id: 'inner', name: 'Inner / mid back', hint: 'Rhomboids and mid traps — rows to the chest, squeezing the shoulder blades.' },
+      { id: 'traps', name: 'Upper traps', hint: 'Shrugs and high pulls — the slope from neck to shoulder.' },
+      { id: 'lower', name: 'Lower back', hint: 'Spinal erectors — hinges and extensions.' }
+    ]},
+    { id: 'shoulders', name: 'Shoulders', emoji: '🥥', areas: [
+      { id: 'front', name: 'Front delts', hint: 'Overhead and front-raise work.' },
+      { id: 'side', name: 'Side delts', hint: 'Lateral raises and wide pulls — what makes shoulders look wider.' },
+      { id: 'rear', name: 'Rear delts & cuff', hint: 'Reverse flys, face-down raises and rotator-cuff work.' }
+    ]},
+    { id: 'biceps', name: 'Biceps', emoji: '💪', areas: [
+      { id: 'long', name: 'Outer / long head', hint: 'The “peak”. Arms behind the body or a close grip — incline curls, drag curls.' },
+      { id: 'short', name: 'Inner / short head', hint: 'Arms in front of the body or a wide grip — spider, preacher, concentration curls.' },
+      { id: 'brach', name: 'Brachialis (thickness)', hint: 'Under the biceps — neutral and overhand grips like hammer and reverse curls.' }
+    ]},
+    { id: 'triceps', name: 'Triceps', emoji: '🔱', areas: [
+      { id: 'long', name: 'Long head (inner/back)', hint: 'The biggest head — work it with the arm overhead or stretched.' },
+      { id: 'lateral', name: 'Lateral head (outer)', hint: 'The horseshoe on the outside — pressing and kickbacks.' },
+      { id: 'medial', name: 'Medial head (near elbow)', hint: 'Works in every extension; emphasised by close-grip and lockout work.' }
+    ]},
+    { id: 'forearms', name: 'Forearms', emoji: '✊', areas: [
+      { id: 'flex', name: 'Inner (flexors)', hint: 'Palm-up wrist curls.' },
+      { id: 'ext', name: 'Outer (extensors)', hint: 'Palm-down wrist work and reverse curls.' },
+      { id: 'grip', name: 'Grip', hint: 'Holds, carries and pinches.' }
+    ]},
+    { id: 'legs', name: 'Legs', emoji: '🦵', areas: [
+      { id: 'quads', name: 'Quads', hint: 'Front of the thigh — squats, lunges with an upright torso, knees travelling forward.' },
+      { id: 'hams', name: 'Hamstrings', hint: 'Back of the thigh — hip hinges and knee curls.' },
+      { id: 'adduct', name: 'Inner thigh', hint: 'Adductors — wide stances and side-to-side work.' },
+      { id: 'calves', name: 'Calves', hint: 'Straight-knee raises hit the gastrocnemius; bent-knee raises the soleus.' }
+    ]},
+    { id: 'glutes', name: 'Glutes', emoji: '🍑', areas: [
+      { id: 'max', name: 'Glute max', hint: 'The main glute — hip thrusts, bridges, deep hinges.' },
+      { id: 'med', name: 'Side glutes (medius)', hint: 'Upper/outer glute — abduction and single-leg work.' }
+    ]},
+    { id: 'core', name: 'Core', emoji: '🧱', areas: [
+      { id: 'upper', name: 'Upper abs', hint: 'Curling the ribs toward the pelvis — crunches, sit-ups.' },
+      { id: 'lower', name: 'Lower abs', hint: 'Curling the pelvis toward the ribs — leg raises, reverse crunches.' },
+      { id: 'obliques', name: 'Obliques', hint: 'Sides of the waist — rotation, side bends, anti-lateral-flexion.' },
+      { id: 'deep', name: 'Deep core / stability', hint: 'Bracing and anti-extension — planks, dead bugs, rollouts.' }
+    ]}
+  ];
+
+  // ---- Exercises ----------------------------------------------------------
+  // t: targets as "part.area", main target first. e: equipment required.
+  // s: bench setting. c: form cues. x: extra note. l: 1 beginner, 2 intermediate, 3 advanced.
+  var EX = [
+    // CHEST
+    { n: 'Barbell bench press', t: ['chest.mid', 'chest.lower', 'triceps.lateral', 'shoulders.front'], e: ['B','N'], s: 'Flat (0°)', l: 2,
+      c: ['Shoulder blades pinched and down, slight arch, feet planted.', 'Lower to mid/lower chest, elbows ~45–70° from the body.', 'Drive up and slightly back toward the face.'],
+      x: 'Needs uprights/rack or a spotter. With neither, use the floor press instead.' },
+    { n: 'Incline barbell bench press', t: ['chest.upper', 'shoulders.front', 'triceps.lateral'], e: ['B','N'], s: 'Incline 30–45°', l: 2,
+      c: ['Lower to the upper chest just under the collarbones.', 'Lower angles (30°) keep it chest-focused; 45° adds more front delt.'],
+      x: 'Needs uprights/rack or a spotter.' },
+    { n: 'Decline barbell bench press', t: ['chest.lower', 'chest.mid', 'triceps.lateral'], e: ['B','N'], s: 'Decline −15°', l: 2,
+      c: ['Hook your feet/knees so you don’t slide.', 'Lower to the bottom of the sternum.'],
+      x: 'Needs uprights/rack or a spotter.' },
+    { n: 'Barbell floor press', t: ['chest.mid', 'triceps.lateral', 'triceps.medial'], e: ['B'], l: 1,
+      c: ['Lie on the floor, knees bent; lower until upper arms touch the floor.', 'Pause briefly, then press — no bounce.'],
+      x: 'Safe without a rack — the floor limits the range.' },
+    { n: 'Close-grip bench press', t: ['chest.inner', 'triceps.lateral', 'triceps.medial'], e: ['B','N'], s: 'Flat (0°)', l: 2,
+      c: ['Hands about shoulder-width (not touching).', 'Elbows tucked close to the ribs, touch the lower chest.'],
+      x: 'Needs uprights/rack or a spotter.' },
+    { n: 'Dumbbell bench press', t: ['chest.mid', 'chest.inner', 'triceps.lateral'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Kick the dumbbells up from your knees as you lie back.', 'Lower to a deep stretch, press up and slightly in.'] },
+    { n: 'Incline dumbbell press', t: ['chest.upper', 'shoulders.front'], e: ['D','N'], s: 'Incline 30°', l: 1,
+      c: ['Keep the shoulder blades back on the pad.', 'Lower to the upper chest, elbows slightly in front of the shoulders.'] },
+    { n: 'Low-incline dumbbell press', t: ['chest.upper', 'chest.mid'], e: ['D','N'], s: 'Incline 15°', l: 1,
+      c: ['A great middle ground — upper chest with less shoulder involvement.', 'Full stretch at the bottom.'] },
+    { n: 'Decline dumbbell press', t: ['chest.lower', 'chest.mid'], e: ['D','N'], s: 'Decline −15°', l: 2,
+      c: ['Lock the legs in before you take the weights.', 'Press toward the lower chest line, not the face.'] },
+    { n: 'Reverse-grip incline dumbbell press', t: ['chest.upper', 'triceps.medial'], e: ['D','N'], s: 'Incline 15–30°', l: 2,
+      c: ['Palms face you; elbows stay close to the body.', 'Use lighter weight than a normal press.'] },
+    { n: 'Dumbbell squeeze press', t: ['chest.inner', 'chest.mid', 'triceps.medial'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Press the dumbbells hard into each other the whole set.', 'Lower to the chest and press up, never letting them separate.'] },
+    { n: 'Incline squeeze press', t: ['chest.inner', 'chest.upper'], e: ['D','N'], s: 'Incline 30°', l: 1,
+      c: ['Same squeeze, upper-chest angle.', 'Slow 2–3 s lowering.'] },
+    { n: 'Dumbbell floor press', t: ['chest.mid', 'triceps.lateral'], e: ['D'], l: 1,
+      c: ['Elbows land softly on the floor, pause, press.', 'Neutral (palms-in) grip is easier on the shoulders.'] },
+    { n: 'Flat dumbbell fly', t: ['chest.mid', 'chest.inner'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Soft, fixed bend in the elbows — hug a big tree.', 'Stop when you feel a strong stretch; squeeze the chest to bring them up.'] },
+    { n: 'Incline dumbbell fly', t: ['chest.upper', 'chest.inner'], e: ['D','N'], s: 'Incline 30°', l: 1,
+      c: ['Arc the weights over the upper chest.', 'Light weights, controlled stretch.'] },
+    { n: 'Decline dumbbell fly', t: ['chest.lower', 'chest.inner'], e: ['D','N'], s: 'Decline −15°', l: 2,
+      c: ['Bring the dumbbells together over the lower chest.'] },
+    { n: 'Dumbbell pullover', t: ['chest.lower', 'back.lats', 'triceps.long'], e: ['D','N'], s: 'Flat (0°) — lie across or along it', l: 2,
+      c: ['Hold one dumbbell with both hands over the chest.', 'Lower it behind the head with slightly bent arms until the ribs stretch, pull back over.', 'Keep hips low to stretch the chest; flare elbows out to bias lats.'] },
+    { n: 'Svend press', t: ['chest.inner', 'shoulders.front'], e: ['D'], l: 1,
+      c: ['Press the ends of one dumbbell (or two light ones) between flat palms at chest height.', 'Push straight out, squeezing the palms together, then return.'] },
+    { n: 'Push-up', t: ['chest.mid', 'triceps.lateral', 'shoulders.front', 'core.deep'], e: ['W'], l: 1,
+      c: ['Body in one straight line, glutes tight.', 'Hands just outside the shoulders, chest to the floor.'] },
+    { n: 'Wide push-up', t: ['chest.mid', 'shoulders.front'], e: ['W'], l: 1,
+      c: ['Hands 1.5× shoulder-width.', 'Lower slowly and feel the stretch across the chest.'] },
+    { n: 'Decline push-up (feet on bench)', t: ['chest.upper', 'shoulders.front'], e: ['W','N'], s: 'Flat bench as a box for your feet', l: 2,
+      c: ['Feet up raises the angle — more upper chest and shoulders.', 'Keep the hips from sagging.'] },
+    { n: 'Incline push-up (hands on bench)', t: ['chest.lower', 'chest.mid'], e: ['W','N'], s: 'Flat bench; hands on the edge', l: 1,
+      c: ['Easier variation that biases the lower chest.', 'Touch the chest to the bench edge.'] },
+    { n: 'Diamond push-up', t: ['chest.inner', 'triceps.lateral', 'triceps.medial'], e: ['W'], l: 2,
+      c: ['Index fingers and thumbs touch to form a diamond under the chest.', 'Elbows track back, not out.'] },
+    { n: 'Archer push-up', t: ['chest.mid', 'chest.inner', 'triceps.lateral'], e: ['W'], l: 3,
+      c: ['Very wide hands; shift your weight to one side as you lower.', 'The straight arm assists — a step toward one-arm push-ups.'] },
+    { n: 'Deficit push-up', t: ['chest.mid', 'chest.inner'], e: ['D'], l: 2,
+      c: ['Grip two dumbbells on the floor as handles.', 'Lower your chest below your hands for a deeper stretch.'] },
+
+    // BACK
+    { n: 'Barbell bent-over row', t: ['back.inner', 'back.lats', 'shoulders.rear', 'back.lower'], e: ['B'], l: 2,
+      c: ['Hinge to ~45°, flat back, bar hanging under the shoulders.', 'Pull to the lower chest / upper belly, squeeze the shoulder blades.'] },
+    { n: 'Underhand barbell row', t: ['back.lats', 'biceps.short', 'back.inner'], e: ['B'], l: 2,
+      c: ['Palms up, shoulder-width grip, more upright torso.', 'Drive the elbows back toward the hips.'] },
+    { n: 'Pendlay row', t: ['back.inner', 'back.lats'], e: ['B'], l: 3,
+      c: ['Torso parallel to the floor; bar starts on the floor every rep.', 'Explosive pull to the lower chest, then set it down.'] },
+    { n: 'Wide-grip barbell row to chest', t: ['back.inner', 'shoulders.rear', 'back.traps'], e: ['B'], l: 2,
+      c: ['Wide overhand grip, elbows flared out to ~70°.', 'Pull to the upper chest and pinch the shoulder blades.'] },
+    { n: 'One-arm dumbbell row', t: ['back.lats', 'back.inner'], e: ['D','N'], s: 'Flat (0°) — knee and hand on the bench', l: 1,
+      c: ['Pull the dumbbell toward your hip in an arc, not straight up.', 'Let it stretch forward at the bottom.'] },
+    { n: 'Chest-supported incline row', t: ['back.inner', 'shoulders.rear', 'back.lats'], e: ['D','N'], s: 'Incline 30–45°, lie face-down', l: 1,
+      c: ['Chest stays glued to the pad — no swinging.', 'Elbows out wide for upper/inner back, tucked for lats.'] },
+    { n: 'Two-dumbbell bent-over row', t: ['back.lats', 'back.inner'], e: ['D'], l: 1,
+      c: ['Hinge with a flat back, palms facing each other.', 'Row both to the hips and pause.'] },
+    { n: 'Kroc row', t: ['back.lats', 'back.traps', 'forearms.grip'], e: ['D','N'], s: 'Flat (0°) — hand braced on the bench', l: 3,
+      c: ['Heavy one-arm row with a little body English, high reps (10–20+).', 'Full stretch at the bottom each rep.'] },
+    { n: 'Meadows row', t: ['back.lats', 'back.inner', 'forearms.grip'], e: ['B'], l: 3,
+      c: ['Wedge one end of the bar into a corner (wrap a towel).', 'Stand side-on, grip the loaded sleeve overhand and row it to the hip.'] },
+    { n: 'Renegade row', t: ['back.lats', 'core.deep', 'core.obliques'], e: ['D'], l: 2,
+      c: ['Push-up position on two dumbbells, feet wide.', 'Row one side without twisting the hips.'] },
+    { n: 'Table / inverted row', t: ['back.inner', 'back.lats', 'biceps.short'], e: ['W'], l: 1,
+      c: ['Lie under a sturdy table, grip its edge, body straight.', 'Pull your chest to the table edge. Bend knees to make it easier.'],
+      x: 'Only use a table that is solid and won’t tip.' },
+    { n: 'Prone Y-T-W raise', t: ['back.inner', 'shoulders.rear'], e: ['D','N'], s: 'Incline 30–45°, lie face-down', l: 1,
+      c: ['Very light dumbbells (or none).', 'Raise arms into a Y, then a T, then a W, squeezing the shoulder blades down and back.'] },
+    { n: 'Incline dumbbell shrug', t: ['back.inner', 'back.traps'], e: ['D','N'], s: 'Incline 30–45°, lie face-down', l: 1,
+      c: ['Arms hang straight; pull the shoulder blades back and together.', 'Targets the mid traps rather than the upper.'] },
+    { n: 'Barbell shrug', t: ['back.traps', 'forearms.grip'], e: ['B'], l: 1,
+      c: ['Shrug straight up toward the ears, pause, lower slowly.', 'No rolling of the shoulders.'] },
+    { n: 'Dumbbell shrug', t: ['back.traps'], e: ['D'], l: 1,
+      c: ['Dumbbells at your sides, shrug straight up, 1 s hold at the top.'] },
+    { n: 'Barbell high pull', t: ['back.traps', 'shoulders.side', 'shoulders.rear'], e: ['B'], l: 3,
+      c: ['From mid-thigh, drive with the hips and pull the bar to chest height, elbows high.'] },
+    { n: 'Barbell deadlift', t: ['back.lower', 'legs.hams', 'glutes.max', 'back.traps', 'forearms.grip'], e: ['B'], l: 2,
+      c: ['Bar over mid-foot, shins to the bar, flat back.', 'Push the floor away; bar stays against the legs.', 'Stand tall — don’t lean back at the top.'] },
+    { n: 'Good morning', t: ['back.lower', 'legs.hams', 'glutes.max'], e: ['B'], l: 2,
+      c: ['Bar on the upper back, soft knees.', 'Hinge at the hips until the torso is nearly parallel, keeping a flat back.'],
+      x: 'Start light. Without a rack, clean the bar and press it overhead onto your back, or use a dumbbell hugged to the chest.' },
+    { n: 'Bench back extension', t: ['back.lower', 'glutes.max', 'legs.hams'], e: ['W','N'], s: 'Flat (0°), hips off the end', l: 2,
+      c: ['Lie face-down with hips at the end of the bench and feet anchored (sofa or a partner).', 'Lower the torso, then lift to a straight line — don’t over-arch.'] },
+    { n: 'Superman', t: ['back.lower', 'glutes.max'], e: ['W'], l: 1,
+      c: ['Face-down, lift arms, chest and legs together, hold 2–3 s.'] },
+    { n: 'Bird dog', t: ['back.lower', 'core.deep', 'glutes.max'], e: ['W'], l: 1,
+      c: ['On all fours, extend the opposite arm and leg, keep the hips level.', 'Pause, return slowly, switch.'] },
+
+    // SHOULDERS
+    { n: 'Standing barbell overhead press', t: ['shoulders.front', 'shoulders.side', 'triceps.lateral', 'core.deep'], e: ['B'], l: 2,
+      c: ['Clean the bar to the shoulders; squeeze glutes and abs.', 'Press straight up, move the head through at the top.'] },
+    { n: 'Seated barbell press', t: ['shoulders.front', 'shoulders.side'], e: ['B','N'], s: 'Upright 80–90°', l: 2,
+      c: ['Back against the pad, press from the upper chest.'], x: 'You need to get the bar into position — clean it first or have help.' },
+    { n: 'Seated dumbbell shoulder press', t: ['shoulders.front', 'shoulders.side', 'triceps.lateral'], e: ['D','N'], s: 'Upright 80–90°', l: 1,
+      c: ['Elbows slightly in front of the body, not flared straight out.', 'Lower to ear level, press until arms are nearly straight.'] },
+    { n: 'Arnold press', t: ['shoulders.front', 'shoulders.side'], e: ['D','N'], s: 'Upright 90° (or stand)', l: 2,
+      c: ['Start palms facing you at chin height.', 'Rotate the palms forward as you press up; reverse on the way down.'] },
+    { n: 'Standing dumbbell press', t: ['shoulders.front', 'shoulders.side', 'core.deep'], e: ['D'], l: 1,
+      c: ['Brace the core, no leaning back.'] },
+    { n: 'Landmine press', t: ['shoulders.front', 'chest.upper', 'core.obliques'], e: ['B'], l: 1,
+      c: ['Wedge one end of the bar in a corner (towel-wrapped).', 'Press the free end up and forward, one or both hands.', 'Shoulder-friendly alternative to overhead pressing.'] },
+    { n: 'Z press', t: ['shoulders.front', 'core.deep', 'triceps.lateral'], e: ['D'], l: 3,
+      c: ['Sit on the floor, legs straight out, no back support.', 'Press overhead without leaning back. Barbell works too if you can get it to your shoulders.'] },
+    { n: 'Dumbbell lateral raise', t: ['shoulders.side'], e: ['D'], l: 1,
+      c: ['Slight lean forward, lead with the elbows.', 'Raise to shoulder height, pinkies roughly level with thumbs.', 'Light weights, slow lowering.'] },
+    { n: 'Seated lateral raise', t: ['shoulders.side'], e: ['D','N'], s: 'Upright 90°, or sit on the end of a flat bench', l: 1,
+      c: ['Sitting removes the swing — stricter.'] },
+    { n: 'Side-lying lateral raise', t: ['shoulders.side'], e: ['D','N'], s: 'Incline 30–45°, lie on your side', l: 2,
+      c: ['Lie sideways on the incline; raise the top arm from in front of the hips up to vertical.', 'Keeps tension at the bottom where standing raises go slack.'] },
+    { n: 'Chest-supported Y raise', t: ['shoulders.side', 'back.inner'], e: ['D','N'], s: 'Incline 30–45°, lie face-down', l: 1,
+      c: ['Thumbs up, raise the arms in a Y in line with the bench.', 'Very light weights.'] },
+    { n: 'Wide-grip upright row', t: ['shoulders.side', 'back.traps'], e: ['B'], l: 2,
+      c: ['Hands wider than the shoulders.', 'Pull elbows up and out to roughly shoulder height — not higher.'] },
+    { n: 'Dumbbell upright row', t: ['shoulders.side', 'back.traps'], e: ['D'], l: 1,
+      c: ['Lead with the elbows; dumbbells stay close to the body.', 'Stop at chest height.'] },
+    { n: 'Dumbbell front raise', t: ['shoulders.front'], e: ['D'], l: 1,
+      c: ['Raise to eye level with a soft elbow, alternate or together.'] },
+    { n: 'Barbell front raise', t: ['shoulders.front'], e: ['B'], l: 1,
+      c: ['Overhand shoulder-width grip; raise to eye level. Use an empty or light bar.'] },
+    { n: 'Incline front raise', t: ['shoulders.front'], e: ['D','N'], s: 'Incline 45–60°, lie face-up', l: 2,
+      c: ['Back on the pad, arms hanging; raise to eye level. Long-stretch version.'] },
+    { n: 'Bent-over rear-delt fly', t: ['shoulders.rear', 'back.inner'], e: ['D'], l: 1,
+      c: ['Hinge to near parallel, soft elbows.', 'Sweep the arms out wide — think “out”, not “back”.'] },
+    { n: 'Chest-supported rear-delt fly', t: ['shoulders.rear'], e: ['D','N'], s: 'Incline 30°, lie face-down', l: 1,
+      c: ['Pinkies lead, keep shoulder blades still so the rear delts do the work.'] },
+    { n: 'Side-lying rear-delt raise', t: ['shoulders.rear'], e: ['D','N'], s: 'Flat (0°), lie on your side', l: 1,
+      c: ['Top arm starts across the body, raise it up and back to vertical.'] },
+    { n: 'Wide-grip rear-delt barbell row', t: ['shoulders.rear', 'back.inner'], e: ['B'], l: 2,
+      c: ['Very wide grip, elbows flared to 90°, pull to the upper chest/neck line.'] },
+    { n: 'Side-lying external rotation', t: ['shoulders.rear'], e: ['D','N'], s: 'Flat (0°), lie on your side', l: 1,
+      c: ['Elbow pinned to your side at 90°, rotate the forearm up.', 'Light dumbbell — rotator-cuff health.'] },
+    { n: 'Pike push-up', t: ['shoulders.front', 'triceps.lateral'], e: ['W'], l: 2,
+      c: ['Hips high in an upside-down V, head lowers toward the floor in front of the hands.'] },
+    { n: 'Elevated pike push-up', t: ['shoulders.front', 'shoulders.side', 'triceps.lateral'], e: ['W','N'], s: 'Flat bench under your feet', l: 3,
+      c: ['Feet on the bench, hips stacked over the shoulders — near-vertical press.'] },
+    { n: 'Wall handstand hold', t: ['shoulders.front', 'core.deep'], e: ['W'], l: 3,
+      c: ['Kick up or walk up a wall, ribs tucked, push tall through the shoulders. Hold 15–45 s.'] },
+
+    // BICEPS
+    { n: 'Barbell curl', t: ['biceps.short', 'biceps.long'], e: ['B'], l: 1,
+      c: ['Shoulder-width grip, elbows pinned at your sides.', 'No swinging; lower for 2–3 s.'] },
+    { n: 'Wide-grip barbell curl', t: ['biceps.short'], e: ['B'], l: 1,
+      c: ['Hands wider than the shoulders shifts work to the inner (short) head.'] },
+    { n: 'Close-grip barbell curl', t: ['biceps.long'], e: ['B'], l: 1,
+      c: ['Hands ~10–15 cm apart biases the outer (long) head.'] },
+    { n: 'Barbell drag curl', t: ['biceps.long'], e: ['B'], l: 2,
+      c: ['Drag the bar up your torso, elbows travelling back behind you.', 'Squeeze hard at the top.'] },
+    { n: 'Dumbbell curl (supinating)', t: ['biceps.short', 'biceps.long'], e: ['D'], l: 1,
+      c: ['Start palms-in, rotate the pinky up as you curl.'] },
+    { n: 'Incline dumbbell curl', t: ['biceps.long'], e: ['D','N'], s: 'Incline 45–60°', l: 1,
+      c: ['Arms hang straight down behind the torso — big stretch on the long head.', 'Keep the elbows back; don’t let them drift forward.'] },
+    { n: 'Lying dumbbell curl', t: ['biceps.long'], e: ['D','N'], s: 'Flat (0°), set high if you can', l: 3,
+      c: ['Lie face-up, arms hanging off the sides toward the floor.', 'Curl from the deepest stretch. Light weight.'] },
+    { n: 'Spider curl', t: ['biceps.short'], e: ['D','N'], s: 'Incline 45°, lie face-down', l: 1,
+      c: ['Arms hang straight down in front of the bench.', 'Curl and squeeze hard at the top — no momentum possible.'] },
+    { n: 'Bench preacher curl', t: ['biceps.short', 'biceps.brach'], e: ['D','N'], s: 'Incline 45–60°; kneel behind it', l: 1,
+      c: ['Drape the upper arm over the top of the backrest (use a towel as padding).', 'Lower slowly — don’t fully lock out under heavy load.'] },
+    { n: 'Concentration curl', t: ['biceps.short', 'biceps.brach'], e: ['D','N'], s: 'Sit on a flat bench', l: 1,
+      c: ['Elbow braced against the inner thigh, curl toward the opposite shoulder.'] },
+    { n: 'Wide (out) dumbbell curl', t: ['biceps.short'], e: ['D'], l: 1,
+      c: ['Curl with the dumbbells travelling out to the sides, palms facing forward.'] },
+    { n: 'Hammer curl', t: ['biceps.brach', 'forearms.ext', 'biceps.long'], e: ['D'], l: 1,
+      c: ['Palms face each other the whole rep.'] },
+    { n: 'Cross-body hammer curl', t: ['biceps.brach', 'forearms.ext'], e: ['D'], l: 1,
+      c: ['Curl the dumbbell across the body toward the opposite chest.'] },
+    { n: 'Reverse barbell curl', t: ['biceps.brach', 'forearms.ext'], e: ['B'], l: 1,
+      c: ['Overhand grip, elbows pinned; lighter than a normal curl.'] },
+    { n: 'Zottman curl', t: ['biceps.brach', 'biceps.short', 'forearms.ext'], e: ['D'], l: 2,
+      c: ['Curl up palms-up, rotate to palms-down at the top, lower slowly.'] },
+    { n: 'Towel isometric curl', t: ['biceps.short', 'biceps.long'], e: ['W'], l: 1,
+      c: ['Stand on the middle of a towel, grip the ends with elbows at 90°.', 'Pull up as hard as you can for 10–20 s.'] },
+    { n: 'Underhand table row', t: ['biceps.short', 'back.lats'], e: ['W'], l: 2,
+      c: ['Inverted row under a sturdy table with palms facing you.', 'Focus on bending the elbows rather than squeezing the back.'] },
+
+    // TRICEPS
+    { n: 'Barbell skull crusher', t: ['triceps.long', 'triceps.lateral'], e: ['B','N'], s: 'Flat (0°)', l: 2,
+      c: ['Upper arms angled slightly back, lower the bar toward the top of the head.', 'Only the elbows move.'] },
+    { n: 'Incline skull crusher', t: ['triceps.long'], e: ['B','N'], s: 'Incline 30°', l: 2,
+      c: ['Arms are further overhead — a bigger stretch on the long head.'] },
+    { n: 'Decline skull crusher', t: ['triceps.lateral', 'triceps.medial'], e: ['B','N'], s: 'Decline −15°', l: 2,
+      c: ['Keeps constant tension through the top of the movement.'] },
+    { n: 'Dumbbell skull crusher', t: ['triceps.long', 'triceps.medial'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Palms face each other; lower the dumbbells beside the head.'] },
+    { n: 'Seated overhead dumbbell extension', t: ['triceps.long'], e: ['D','N'], s: 'Upright 90°', l: 1,
+      c: ['Hold one dumbbell by the head with both hands, lower it behind the head.', 'Elbows point forward, not out.'] },
+    { n: 'Single-arm overhead extension', t: ['triceps.long'], e: ['D'], l: 1,
+      c: ['Elbow by the ear, lower the dumbbell behind the head, extend fully.'] },
+    { n: 'Overhead barbell extension', t: ['triceps.long'], e: ['B'], l: 2,
+      c: ['Close overhand grip, lower the bar behind the head, keep elbows narrow.'] },
+    { n: 'Dumbbell kickback', t: ['triceps.lateral', 'triceps.long'], e: ['D','N'], s: 'Flat (0°), hand and knee on the bench', l: 1,
+      c: ['Upper arm parallel to the floor and still.', 'Straighten fully and squeeze for 1 s.'] },
+    { n: 'JM press', t: ['triceps.lateral', 'triceps.medial'], e: ['B','N'], s: 'Flat (0°)', l: 3,
+      c: ['Close grip; lower the bar toward the chin by bending the elbows forward — a hybrid of close-grip press and skull crusher.'] },
+    { n: 'Tate press', t: ['triceps.medial', 'triceps.lateral'], e: ['D','N'], s: 'Flat (0°)', l: 2,
+      c: ['Dumbbells over the chest, ends touching, elbows flared out.', 'Lower the dumbbells to the chest by bending the elbows outward, extend.'] },
+    { n: 'Close-grip dumbbell press', t: ['triceps.lateral', 'triceps.medial', 'chest.inner'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Palms facing each other, dumbbells touching, elbows tucked.'] },
+    { n: 'Bench dip', t: ['triceps.lateral', 'triceps.medial'], e: ['W','N'], s: 'Flat (0°)', l: 1,
+      c: ['Hands on the bench edge behind you, legs out.', 'Lower until elbows are ~90°; keep hips close to the bench.', 'Put a dumbbell on your lap to make it harder.'] },
+    { n: 'Bench triceps extension (bodyweight)', t: ['triceps.long', 'triceps.lateral'], e: ['W','N'], s: 'Flat (0°)', l: 2,
+      c: ['Hands on the bench edge in a plank, forearms drop down onto the bench.', 'Push back up by straightening the elbows only.'] },
+
+    // FOREARMS
+    { n: 'Barbell wrist curl', t: ['forearms.flex'], e: ['B','N'], s: 'Flat (0°), forearms resting on it', l: 1,
+      c: ['Palms up, wrists off the edge; let the bar roll to the fingertips, then curl up.'] },
+    { n: 'Behind-the-back wrist curl', t: ['forearms.flex', 'forearms.grip'], e: ['B'], l: 1,
+      c: ['Hold the bar behind you palms-back; curl the wrists up.'] },
+    { n: 'Dumbbell wrist curl', t: ['forearms.flex'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['One arm at a time, forearm on the bench or thigh.'] },
+    { n: 'Reverse wrist curl', t: ['forearms.ext'], e: ['B','N'], s: 'Flat (0°)', l: 1,
+      c: ['Palms down, forearms on the bench; lift the knuckles up. Go light.'] },
+    { n: 'Dumbbell reverse wrist curl', t: ['forearms.ext'], e: ['D','N'], s: 'Flat (0°)', l: 1,
+      c: ['Palm down, lift the back of the hand.'] },
+    { n: 'Dumbbell wrist lever (radial deviation)', t: ['forearms.ext'], e: ['D'], l: 1,
+      c: ['Hold one end of a dumbbell (or one-side-loaded handle), arm at your side.', 'Tilt the weighted end up and down using only the wrist.'] },
+    { n: 'Farmer’s carry', t: ['forearms.grip', 'back.traps', 'core.deep'], e: ['D'], l: 1,
+      c: ['Heavy dumbbells, walk tall for 30–60 s or 20–40 m.'] },
+    { n: 'Barbell static hold', t: ['forearms.grip', 'back.traps'], e: ['B'], l: 1,
+      c: ['Deadlift the bar and just hold it — double overhand grip, 20–60 s.'] },
+    { n: 'Dumbbell head pinch', t: ['forearms.grip'], e: ['D'], l: 2,
+      c: ['Grip a dumbbell by the end (the head) with your fingertips and hold.'] },
+    { n: 'Fingertip push-up / plank', t: ['forearms.grip', 'chest.mid'], e: ['W'], l: 3,
+      c: ['Support yourself on the fingertips. Start from the knees.'] },
+
+    // LEGS — quads
+    { n: 'Goblet squat', t: ['legs.quads', 'glutes.max', 'legs.adduct'], e: ['D'], l: 1,
+      c: ['Hold one dumbbell vertically at the chest.', 'Sit down between the heels, chest up, knees out.'] },
+    { n: 'Heel-elevated goblet squat', t: ['legs.quads'], e: ['D'], l: 1,
+      c: ['Heels on a plate or a book; narrow stance.', 'Knees travel far forward — strong quad bias.'] },
+    { n: 'Dumbbell squat', t: ['legs.quads', 'glutes.max'], e: ['D'], l: 1,
+      c: ['Dumbbells at your sides, squat to depth, keep the chest up.'] },
+    { n: 'Barbell front squat', t: ['legs.quads', 'core.deep', 'glutes.max'], e: ['B'], l: 3,
+      c: ['Bar on the front of the shoulders, elbows high.', 'Upright torso, sit straight down.'],
+      x: 'Without a rack: clean the bar to your shoulders from the floor first.' },
+    { n: 'Barbell back squat', t: ['legs.quads', 'glutes.max', 'legs.adduct', 'back.lower'], e: ['B'], l: 2,
+      c: ['Bar on the upper traps, brace, sit back and down to at least parallel.'],
+      x: 'Needs a rack/stands to load safely. Without one, use front squats, Zercher squats or dumbbells.' },
+    { n: 'Zercher squat', t: ['legs.quads', 'core.deep', 'back.inner'], e: ['B'], l: 3,
+      c: ['Deadlift the bar to the thighs, then hold it in the crooks of the elbows.', 'Squat with an upright torso. Pad the bar with a towel.'] },
+    { n: 'Barbell hack squat', t: ['legs.quads'], e: ['B'], l: 2,
+      c: ['Bar held behind the legs, heels elevated on plates.', 'Squat down keeping the torso upright.'] },
+    { n: 'Bulgarian split squat (quad focus)', t: ['legs.quads', 'glutes.max', 'glutes.med'], e: ['D','N'], s: 'Flat (0°) — rear foot on it', l: 2,
+      c: ['Shorter stance, upright torso, front knee travels forward over the toes.', 'Can be done with bodyweight only.'] },
+    { n: 'Step-up', t: ['legs.quads', 'glutes.max'], e: ['D','N'], s: 'Flat bench as the box (check it’s stable)', l: 1,
+      c: ['Whole foot on the bench, drive through that heel.', 'Don’t push off the back leg.'] },
+    { n: 'Reverse lunge', t: ['legs.quads', 'glutes.max'], e: ['D'], l: 1,
+      c: ['Step back, drop the back knee toward the floor.', 'Knee-friendlier than forward lunges.'] },
+    { n: 'Walking lunge', t: ['legs.quads', 'glutes.max', 'legs.adduct'], e: ['D'], l: 1,
+      c: ['Long, controlled steps; back knee kisses the floor.'] },
+    { n: 'Barbell lunge', t: ['legs.quads', 'glutes.max'], e: ['B'], l: 2,
+      c: ['Bar on the back (or front rack). Reverse lunges are most stable.'] },
+    { n: 'Bodyweight squat', t: ['legs.quads', 'glutes.max'], e: ['W'], l: 1,
+      c: ['Feet shoulder-width, sit deep, arms forward for balance.'] },
+    { n: 'Jump squat', t: ['legs.quads', 'glutes.max', 'legs.calves'], e: ['W'], l: 2,
+      c: ['Quarter-to-half squat, explode up, land softly and go straight into the next rep.'] },
+    { n: 'Sissy squat', t: ['legs.quads'], e: ['W'], l: 3,
+      c: ['Hold a door frame, rise on the toes and lean back as the knees travel forward.', 'Hips stay extended — a straight line from knees to shoulders.'] },
+    { n: 'Reverse Nordic', t: ['legs.quads'], e: ['W'], l: 2,
+      c: ['Kneel tall (pad under knees), lean back as a plank from knee to head, return.', 'Great for the rectus femoris (front-centre quad).'] },
+    { n: 'Wall sit', t: ['legs.quads'], e: ['W'], l: 1,
+      c: ['Back on a wall, thighs parallel, hold 30–90 s. Hold dumbbells for more.'] },
+    { n: 'Box pistol squat', t: ['legs.quads', 'glutes.max', 'glutes.med'], e: ['W','N'], s: 'Flat bench to sit back to', l: 2,
+      c: ['On one leg, sit down to the bench with control, stand back up without rocking.'] },
+    { n: 'Pistol squat', t: ['legs.quads', 'glutes.max', 'core.deep'], e: ['W'], l: 3,
+      c: ['Full single-leg squat with the other leg out front.'] },
+
+    // LEGS — hamstrings
+    { n: 'Barbell Romanian deadlift', t: ['legs.hams', 'glutes.max', 'back.lower'], e: ['B'], l: 2,
+      c: ['Soft knees, push the hips back, bar slides down the thighs.', 'Stop at a strong hamstring stretch (usually mid-shin), flat back.'] },
+    { n: 'Dumbbell Romanian deadlift', t: ['legs.hams', 'glutes.max'], e: ['D'], l: 1,
+      c: ['Same hinge, dumbbells close to the legs.'] },
+    { n: 'Single-leg Romanian deadlift', t: ['legs.hams', 'glutes.max', 'glutes.med'], e: ['D'], l: 2,
+      c: ['Hinge on one leg, back leg in line with the torso, hips square.'] },
+    { n: 'Stiff-leg deadlift', t: ['legs.hams', 'back.lower'], e: ['B'], l: 2,
+      c: ['Knees nearly straight, bar can come further from the legs.', 'Lighter than an RDL.'] },
+    { n: 'Lying dumbbell leg curl', t: ['legs.hams'], e: ['D','N'], s: 'Flat (0°), lie face-down', l: 2,
+      c: ['Knees just off the end, a dumbbell squeezed between your feet.', 'Curl the heels toward the glutes. Start light — have someone place the dumbbell.'] },
+    { n: 'Nordic curl', t: ['legs.hams'], e: ['W'], l: 3,
+      c: ['Kneel, feet anchored under a heavy sofa or held by someone.', 'Lower forward as slowly as you can, catch yourself with your hands, push back up.'] },
+    { n: 'Sliding leg curl', t: ['legs.hams', 'glutes.max'], e: ['W'], l: 2,
+      c: ['Lie face-up, heels on towels on a smooth floor.', 'Bridge the hips up and slide the heels in and out.'] },
+    { n: 'Bench hamstring bridge', t: ['legs.hams', 'glutes.max'], e: ['W','N'], s: 'Flat (0°) — heels on it', l: 1,
+      c: ['Heels on the bench, legs fairly straight; drive the hips up.', 'Single-leg makes it much harder.'] },
+    { n: 'Dumbbell swing', t: ['legs.hams', 'glutes.max'], e: ['D'], l: 2,
+      c: ['Hinge (not squat), hike the dumbbell back and snap the hips forward.', 'The arms just guide it.'] },
+
+    // LEGS — inner thigh
+    { n: 'Sumo deadlift', t: ['legs.adduct', 'glutes.max', 'legs.quads'], e: ['B'], l: 2,
+      c: ['Very wide stance, toes out, hands inside the knees.', 'Spread the floor apart with the feet.'] },
+    { n: 'Sumo / plié goblet squat', t: ['legs.adduct', 'glutes.max'], e: ['D'], l: 1,
+      c: ['Wide stance, toes out ~45°, dumbbell hanging between the legs.', 'Elevate both feet on plates to sink deeper.'] },
+    { n: 'Cossack squat', t: ['legs.adduct', 'legs.quads', 'glutes.med'], e: ['W'], l: 2,
+      c: ['Wide stance; shift into one deep side squat while the other leg straightens, toes up.', 'Hold a dumbbell at the chest to add load.'] },
+    { n: 'Lateral lunge', t: ['legs.adduct', 'glutes.max', 'legs.quads'], e: ['D'], l: 1,
+      c: ['Step wide to the side, sit back into that hip, trailing leg straight.'] },
+    { n: 'Copenhagen plank', t: ['legs.adduct', 'core.obliques'], e: ['W','N'], s: 'Flat (0°) — top leg on it', l: 3,
+      c: ['Side plank with the top foot or knee on the bench, bottom leg hanging.', 'Start with the knee on the bench (easier).'] },
+    { n: 'Side-lying hip adduction', t: ['legs.adduct'], e: ['W'], l: 1,
+      c: ['Lie on your side, top leg crossed in front; raise the bottom leg.'] },
+
+    // LEGS — calves
+    { n: 'Standing dumbbell calf raise', t: ['legs.calves'], e: ['D'], l: 1,
+      c: ['Balls of the feet on a step or plate, heels hanging.', 'Full stretch at the bottom, 1 s pause at the top.'] },
+    { n: 'Single-leg calf raise', t: ['legs.calves'], e: ['W'], l: 1,
+      c: ['Hold a wall for balance, one foot on a step. Add a dumbbell when easy.'] },
+    { n: 'Barbell calf raise', t: ['legs.calves'], e: ['B'], l: 2,
+      c: ['Bar on the back or held in front (front-rack); toes on a plate.'] },
+    { n: 'Seated calf raise', t: ['legs.calves'], e: ['D','N'], s: 'Flat (0°) — sit on it', l: 1,
+      c: ['Toes on a plate, dumbbells on the knees.', 'Bent knee targets the soleus (lower, deeper calf).'] },
+    { n: 'Pogo hops', t: ['legs.calves'], e: ['W'], l: 1,
+      c: ['Quick, small bounces on the balls of the feet with stiff ankles.'] },
+
+    // GLUTES
+    { n: 'Barbell hip thrust', t: ['glutes.max', 'legs.hams'], e: ['B','N'], s: 'Flat (0°) — upper back against its edge', l: 2,
+      c: ['Pad the bar. Shoulders on the bench, feet flat, shins vertical at the top.', 'Tuck the chin and ribs, squeeze the glutes for 1–2 s.'],
+      x: 'Brace the bench against a wall so it doesn’t slide.' },
+    { n: 'Dumbbell hip thrust', t: ['glutes.max'], e: ['D','N'], s: 'Flat (0°) — upper back against its edge', l: 1,
+      c: ['Dumbbell across the hips, same setup as the barbell version.'] },
+    { n: 'Single-leg hip thrust', t: ['glutes.max', 'glutes.med'], e: ['W','N'], s: 'Flat (0°) — upper back against its edge', l: 2,
+      c: ['One foot down, other knee pulled in; keep the pelvis level.'] },
+    { n: 'Barbell glute bridge', t: ['glutes.max'], e: ['B'], l: 1,
+      c: ['From the floor, bar over the hips; drive up and hold.'] },
+    { n: 'Glute bridge', t: ['glutes.max', 'legs.hams'], e: ['W'], l: 1,
+      c: ['Feet near the glutes, drive through the heels, squeeze at the top.'] },
+    { n: 'Frog pump', t: ['glutes.max'], e: ['W'], l: 1,
+      c: ['Soles of the feet together, knees out; short, fast bridges. Add a dumbbell on the hips.'] },
+    { n: 'Bulgarian split squat (glute focus)', t: ['glutes.max', 'legs.hams', 'legs.quads'], e: ['D','N'], s: 'Flat (0°) — rear foot on it', l: 2,
+      c: ['Longer stance and a forward lean of the torso.', 'Sink deep and push through the front heel.'] },
+    { n: 'Deficit reverse lunge', t: ['glutes.max', 'legs.quads'], e: ['D'], l: 2,
+      c: ['Front foot on a plate, step back into a deep lunge.'] },
+    { n: 'Reverse hyper on bench', t: ['glutes.max', 'back.lower', 'legs.hams'], e: ['W','N'], s: 'Flat (0°) — hips at the end', l: 2,
+      c: ['Lie face-down holding the bench, legs hanging off the end.', 'Lift the straight legs to hip height, squeeze, lower. Dumbbell between the feet for load.'] },
+    { n: 'Donkey kick', t: ['glutes.max'], e: ['W'], l: 1,
+      c: ['On all fours, kick one bent leg up toward the ceiling without arching the back.'] },
+    { n: 'Side-lying hip abduction', t: ['glutes.med'], e: ['W'], l: 1,
+      c: ['Lie on your side, top leg straight and slightly behind you, toes forward.', 'Lift with the heel leading.'] },
+    { n: 'Clamshell', t: ['glutes.med'], e: ['W'], l: 1,
+      c: ['Side-lying, knees bent, feet together; open the top knee without rolling back.'] },
+    { n: 'Fire hydrant', t: ['glutes.med'], e: ['W'], l: 1,
+      c: ['On all fours, lift a bent leg out to the side.'] },
+    { n: 'Curtsy lunge', t: ['glutes.med', 'glutes.max', 'legs.adduct'], e: ['D'], l: 2,
+      c: ['Step back and across behind the front leg, hips square.'] },
+    { n: 'Side plank with leg lift', t: ['glutes.med', 'core.obliques'], e: ['W'], l: 2,
+      c: ['Side plank, then raise the top leg and lower it with control.'] },
+
+    // CORE
+    { n: 'Crunch', t: ['core.upper'], e: ['W'], l: 1,
+      c: ['Curl the ribs toward the pelvis, lower back stays down. Exhale at the top.'] },
+    { n: 'Weighted crunch', t: ['core.upper'], e: ['D'], l: 1,
+      c: ['Hold a dumbbell on the chest. Slow, small range.'] },
+    { n: 'Decline sit-up', t: ['core.upper', 'core.lower'], e: ['W','N'], s: 'Decline −15°, feet hooked', l: 2,
+      c: ['Curl up one vertebra at a time. Hold a dumbbell to the chest for more.'] },
+    { n: 'Decline crunch', t: ['core.upper'], e: ['W','N'], s: 'Decline −15°, feet hooked', l: 2,
+      c: ['Short range — just curl the shoulders off, keep tension the whole set.'] },
+    { n: 'Lying leg raise on bench', t: ['core.lower'], e: ['W','N'], s: 'Flat (0°), hold the bench behind your head', l: 2,
+      c: ['Lift straight legs, then curl the hips off the bench at the top.', 'Lower slowly without arching the lower back.'] },
+    { n: 'Incline reverse crunch', t: ['core.lower'], e: ['W','N'], s: 'Incline 15–30°, head at the high end', l: 2,
+      c: ['Hold the bench behind your head, knees bent.', 'Roll the hips up toward the chest. Steeper = harder.'] },
+    { n: 'Reverse crunch', t: ['core.lower'], e: ['W'], l: 1,
+      c: ['On the floor, curl the knees to the chest and lift the hips slightly.'] },
+    { n: 'Flutter kicks', t: ['core.lower', 'core.deep'], e: ['W'], l: 1,
+      c: ['Lower back pressed down, small fast kicks with straight legs.'] },
+    { n: 'V-up', t: ['core.upper', 'core.lower'], e: ['W'], l: 2,
+      c: ['Lift straight arms and legs together to meet over the hips.'] },
+    { n: 'Dragon flag', t: ['core.lower', 'core.deep'], e: ['W','N'], s: 'Flat (0°), grip behind your head', l: 3,
+      c: ['Body rigid from shoulders to toes, lower as one piece.', 'Start with negatives only.'],
+      x: 'Make sure the bench can’t tip — weight it or brace it.' },
+    { n: 'Russian twist', t: ['core.obliques'], e: ['D'], l: 1,
+      c: ['Lean back, feet up or down; rotate the dumbbell side to side with the ribs, not just the arms.'] },
+    { n: 'Bicycle crunch', t: ['core.obliques', 'core.upper'], e: ['W'], l: 1,
+      c: ['Slow and controlled — elbow toward the opposite knee.'] },
+    { n: 'Dumbbell side bend', t: ['core.obliques'], e: ['D'], l: 1,
+      c: ['One dumbbell only; bend sideways, then pull back up with the opposite side.'] },
+    { n: 'Side plank', t: ['core.obliques', 'core.deep', 'glutes.med'], e: ['W'], l: 1,
+      c: ['Elbow under the shoulder, straight line, hips high. 20–60 s each side.'] },
+    { n: 'Landmine rotation', t: ['core.obliques', 'shoulders.front'], e: ['B'], l: 2,
+      c: ['Bar end in a corner, hold the other end overhead with straight arms.', 'Rotate it in an arc down to each hip.'] },
+    { n: 'Dumbbell woodchop', t: ['core.obliques'], e: ['D'], l: 1,
+      c: ['Diagonal chop from high on one side to low on the other, pivoting the back foot.'] },
+    { n: 'Suitcase carry', t: ['core.obliques', 'core.deep', 'forearms.grip'], e: ['D'], l: 1,
+      c: ['One heavy dumbbell in one hand, walk without leaning.'] },
+    { n: 'Heel taps', t: ['core.obliques'], e: ['W'], l: 1,
+      c: ['On your back, knees bent, reach side to side to tap each heel.'] },
+    { n: 'Plank', t: ['core.deep'], e: ['W'], l: 1,
+      c: ['Forearms under shoulders, squeeze glutes and pull ribs down. 20–60 s.'] },
+    { n: 'Dead bug', t: ['core.deep', 'core.lower'], e: ['W'], l: 1,
+      c: ['On your back, arms up, knees at 90°.', 'Extend opposite arm and leg while keeping the lower back pressed down.'] },
+    { n: 'Hollow body hold', t: ['core.deep', 'core.lower'], e: ['W'], l: 2,
+      c: ['Lower back glued to the floor, shoulders and legs off it. Hold 15–40 s.'] },
+    { n: 'Barbell rollout', t: ['core.deep', 'core.upper', 'back.lats'], e: ['B'], l: 3,
+      c: ['Barbell with round plates, kneeling; roll out as far as you can without sagging.', 'Pull back with the abs.'] },
+    { n: 'Mountain climbers', t: ['core.lower', 'core.deep'], e: ['W'], l: 1,
+      c: ['High plank, drive the knees in alternately; hips stay low.'] }
+  ];
+
+  // ---- Helpers -------------------------------------------------------------
+  var STORE = 'home-workouts:v1';
+  var mem = {};
+  function load() {
+    try { var raw = localStorage.getItem(STORE); if (raw) return JSON.parse(raw); } catch (e) {}
+    return mem.state || null;
+  }
+  function save() {
+    var data = { part: state.part, equip: state.equip, saved: state.saved, mainOnly: state.mainOnly };
+    mem.state = data;
+    try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {}
+  }
+
+  EX.forEach(function (ex, i) { ex.id = i; ex.key = ex.n; });
+
+  var saved = load() || {};
+  var state = {
+    part: saved.part && PARTS.some(function (p) { return p.id === saved.part; }) ? saved.part : 'chest',
+    areas: [],
+    equip: Array.isArray(saved.equip) ? saved.equip : ['B', 'D', 'N', 'W'],
+    saved: Array.isArray(saved.saved) ? saved.saved : [],
+    mainOnly: !!saved.mainOnly,
+    savedOnly: false,
+    q: '',
+    picked: null,
+    open: {}
+  };
+
+  function part() { return PARTS.filter(function (p) { return p.id === state.part; })[0]; }
+  function areaName(full) {
+    var bits = full.split('.');
+    var p = PARTS.filter(function (x) { return x.id === bits[0]; })[0];
+    var a = p && p.areas.filter(function (x) { return x.id === bits[1]; })[0];
+    return a ? a.name : full;
+  }
+  // The exercise's first target within the current body part.
+  function mainInPart(ex, partId) {
+    for (var i = 0; i < ex.t.length; i++) if (ex.t[i].indexOf(partId + '.') === 0) return ex.t[i];
+    return null;
+  }
+  function equipOk(ex) {
+    return ex.e.every(function (k) { return state.equip.indexOf(k) !== -1; });
+  }
+  function matchesArea(ex, partId, areaId) {
+    var full = partId + '.' + areaId;
+    return state.mainOnly ? ex.t[0] === full : ex.t.indexOf(full) !== -1;
+  }
+  function inPart(ex, partId) { return mainInPart(ex, partId) !== null; }
+
+  function baseList() {
+    var p = state.part;
+    return EX.filter(function (ex) { return inPart(ex, p) && equipOk(ex); });
+  }
+
+  function filtered() {
+    var p = state.part, q = state.q.trim().toLowerCase();
+    var list = baseList().filter(function (ex) {
+      if (state.areas.length && !state.areas.some(function (a) { return matchesArea(ex, p, a); })) return false;
+      if (state.savedOnly && state.saved.indexOf(ex.key) === -1) return false;
+      if (q) {
+        var hay = (ex.n + ' ' + ex.t.map(areaName).join(' ') + ' ' + ex.e.map(function (k) { return EQUIP_NAME[k]; }).join(' ') + ' ' + (ex.s || '')).toLowerCase();
+        if (q.split(/\s+/).some(function (w) { return hay.indexOf(w) === -1; })) return false;
+      }
+      return true;
+    });
+    // Exercises whose main target is a selected area (or this body part) come
+    // first; ones that only hit it as a secondary muscle go to the end.
+    function rank(ex) {
+      var bits = ex.t[0].split('.');
+      if (bits[0] !== p) return 2;
+      return !state.areas.length || state.areas.indexOf(bits[1]) !== -1 ? 0 : 1;
+    }
+    list.sort(function (a, b) { return rank(a) - rank(b) || a.id - b.id; });
+    if (state.picked) {
+      list = list.filter(function (ex) { return state.picked.indexOf(ex.id) !== -1; });
+    }
+    return list;
+  }
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === 'text') n.textContent = attrs[k];
+      else if (k === 'on') for (var ev in attrs.on) n.addEventListener(ev, attrs.on[ev]);
+      else n.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+
+  // ---- Rendering -----------------------------------------------------------
+  var $parts = document.getElementById('parts');
+  var $areas = document.getElementById('areas');
+  var $hint = document.getElementById('areaHint');
+  var $equip = document.getElementById('equip');
+  var $list = document.getElementById('list');
+  var $count = document.getElementById('count');
+  var $showAll = document.getElementById('showAll');
+  var $search = document.getElementById('search');
+  var $savedBtn = document.getElementById('savedBtn');
+  var $mainOnly = document.getElementById('mainOnly');
+
+  function renderParts() {
+    $parts.innerHTML = '';
+    PARTS.forEach(function (p) {
+      $parts.appendChild(el('button', {
+        class: 'part', type: 'button', 'aria-pressed': String(p.id === state.part),
+        on: { click: function () {
+          state.part = p.id; state.areas = []; state.picked = null; state.open = {};
+          save(); render();
+        } }
+      }, [el('span', { class: 'em', text: p.emoji }), el('span', { class: 'nm', text: p.name })]));
+    });
+  }
+
+  function renderAreas() {
+    var p = part(), base = baseList();
+    document.getElementById('areaLabel').textContent = p.name + ' — target area';
+    $areas.innerHTML = '';
+    $areas.appendChild(el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(state.areas.length === 0),
+      on: { click: function () { state.areas = []; state.picked = null; render(); } }
+    }, ['All ', el('span', { class: 'n', text: String(base.length) })]));
+    p.areas.forEach(function (a) {
+      var n = base.filter(function (ex) { return matchesArea(ex, p.id, a.id); }).length;
+      var on = state.areas.indexOf(a.id) !== -1;
+      $areas.appendChild(el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(on),
+        on: { click: function () {
+          if (on) state.areas = state.areas.filter(function (x) { return x !== a.id; });
+          else state.areas = state.areas.concat(a.id);
+          state.picked = null; render();
+        } }
+      }, [a.name + ' ', el('span', { class: 'n', text: String(n) })]));
+    });
+    var hints = p.areas.filter(function (a) { return state.areas.indexOf(a.id) !== -1; })
+      .map(function (a) { return a.name + ': ' + a.hint; });
+    $hint.textContent = hints.length ? hints.join('  ·  ') : 'Tap one or more areas to focus. Leave on “All” to see everything for ' + p.name.toLowerCase() + '.';
+  }
+
+  function renderEquip() {
+    $equip.innerHTML = '';
+    EQUIP.forEach(function (q) {
+      var on = state.equip.indexOf(q.id) !== -1;
+      $equip.appendChild(el('button', {
+        class: 'chip', type: 'button', 'aria-pressed': String(on),
+        on: { click: function () {
+          state.equip = on ? state.equip.filter(function (x) { return x !== q.id; }) : state.equip.concat(q.id);
+          state.picked = null; save(); render();
+        } }
+      }, [q.emoji + ' ' + q.label]));
+    });
+  }
+
+  var LEVEL = { 1: 'Beginner-friendly', 2: 'Intermediate', 3: 'Advanced' };
+
+  function card(ex) {
+    var p = state.part;
+    var isSaved = state.saved.indexOf(ex.key) !== -1;
+    var wrap = el('article', { class: 'ex' + (state.open[ex.id] ? ' open' : '') });
+
+    var tags = el('div', { class: 'tags' });
+    if (ex.s) tags.appendChild(el('span', { class: 'tag bench', text: '🪑 ' + ex.s }));
+    ex.t.forEach(function (t) {
+      var bits = t.split('.');
+      var hit = bits[0] === p && (state.areas.length ? state.areas.indexOf(bits[1]) !== -1 : t === ex.t[0]);
+      tags.appendChild(el('span', { class: 'tag' + (hit ? ' hit' : ''), text: areaName(t) }));
+    });
+    ex.e.forEach(function (k) { tags.appendChild(el('span', { class: 'tag eq', text: EQUIP_NAME[k] })); });
+
+    var head = el('button', {
+      class: 'ex-head', type: 'button', 'aria-expanded': String(!!state.open[ex.id]),
+      on: { click: function () {
+        state.open[ex.id] = !state.open[ex.id];
+        wrap.classList.toggle('open', state.open[ex.id]);
+        head.setAttribute('aria-expanded', String(state.open[ex.id]));
+      } }
+    }, [
+      el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+      el('div', { class: 'ex-main' }, [el('div', { class: 'ex-name', text: ex.n }), tags])
+    ]);
+
+    var star = el('button', {
+      class: 'star', type: 'button', 'aria-pressed': String(isSaved),
+      'aria-label': isSaved ? 'Remove from saved' : 'Save exercise', text: isSaved ? '★' : '☆',
+      on: { click: function (e) {
+        e.stopPropagation();
+        var i = state.saved.indexOf(ex.key);
+        if (i === -1) state.saved.push(ex.key); else state.saved.splice(i, 1);
+        save(); renderList();
+      } }
+    });
+
+    var top = el('div', { style: 'display:flex;align-items:flex-start' }, [head, el('div', { style: 'padding:12px 10px 0 0' }, [star])]);
+    head.style.flex = '1';
+
+    var body = el('div', { class: 'ex-body' }, [
+      el('ul', null, ex.c.map(function (c) { return el('li', { text: c }); })),
+      ex.x ? el('p', { class: 'note', text: '⚠️ ' + ex.x }) : null,
+      el('p', { class: 'level', text: LEVEL[ex.l] || '' })
+    ]);
+    wrap.appendChild(top);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function renderList() {
+    var list = filtered();
+    $list.innerHTML = '';
+    if (!list.length) {
+      var why = state.equip.length === 0 ? 'Turn on at least one piece of equipment.'
+        : state.savedOnly ? 'No saved exercises here yet — tap ☆ on any exercise to save it.'
+        : 'Nothing matches. Try another area, more equipment, or clear the search.';
+      $list.appendChild(el('div', { class: 'empty', text: why }));
+    } else {
+      list.forEach(function (ex) { $list.appendChild(card(ex)); });
+    }
+    $count.textContent = state.picked
+      ? '🎲 ' + list.length + ' picked for you'
+      : list.length + ' exercise' + (list.length === 1 ? '' : 's');
+    $showAll.hidden = !state.picked;
+    $savedBtn.setAttribute('aria-pressed', String(state.savedOnly));
+  }
+
+  function render() {
+    renderParts();
+    renderAreas();
+    renderEquip();
+    $mainOnly.checked = state.mainOnly;
+    renderList();
+  }
+
+  // Pick a varied set: try to cover each selected (or every) area first.
+  function pick(n) {
+    var saveP = state.picked; state.picked = null;
+    var pool = filtered(); state.picked = saveP;
+    if (!pool.length) return;
+    var p = part();
+    var areas = state.areas.length ? state.areas : p.areas.map(function (a) { return a.id; });
+    var shuffled = pool.slice().sort(function () { return Math.random() - 0.5; });
+    var out = [];
+    var i = 0;
+    while (out.length < Math.min(n, pool.length) && i < areas.length * 3) {
+      var a = areas[i % areas.length];
+      var cand = shuffled.filter(function (ex) { return out.indexOf(ex.id) === -1 && ex.t[0] === p.id + '.' + a; })[0];
+      if (cand) out.push(cand.id);
+      i++;
+    }
+    shuffled.forEach(function (ex) { if (out.length < n && out.indexOf(ex.id) === -1) out.push(ex.id); });
+    state.picked = out;
+    renderList();
+  }
+
+  // ---- Events --------------------------------------------------------------
+  $search.addEventListener('input', function () { state.q = $search.value; state.picked = null; renderList(); });
+  $savedBtn.addEventListener('click', function () { state.savedOnly = !state.savedOnly; state.picked = null; renderList(); });
+  $mainOnly.addEventListener('change', function () { state.mainOnly = $mainOnly.checked; state.picked = null; save(); renderAreas(); renderList(); });
+  document.getElementById('pickBtn').addEventListener('click', function () { pick(5); });
+  $showAll.addEventListener('click', function () { state.picked = null; renderList(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
