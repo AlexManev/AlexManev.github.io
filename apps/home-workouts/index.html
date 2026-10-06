@@ -134,8 +134,25 @@
     .ex-body .note { margin: 10px 0 0; font-size: 0.88rem; color: var(--muted); }
     .ex-body .level { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); }
 
+    .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0 0; }
+    .photos figure { margin: 0; position: relative; }
+    .photos img {
+      display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain;
+      border-radius: 10px; background: var(--surface-2);
+    }
+    .photos figcaption {
+      position: absolute; left: 6px; top: 6px; font-size: 0.7rem; font-weight: 700;
+      background: rgba(0, 0, 0, 0.6); color: #fff; padding: 2px 7px; border-radius: 999px;
+    }
+    @media (max-width: 560px) { .photos { grid-template-columns: 1fr; } }
+    .photo-src { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+    .demo { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 0.88rem; text-decoration: none; }
+    .demo:hover { text-decoration: underline; }
+    .cam { font-size: 0.8rem; margin-left: 4px; opacity: 0.7; }
+
     .empty { text-align: center; color: var(--muted); padding: 32px 12px; }
     footer { margin-top: 28px; color: var(--muted); font-size: 0.8rem; }
+    footer a { color: var(--accent); }
 
     @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
   </style>
@@ -171,7 +188,7 @@
   </div>
   <div class="list" id="list"></div>
 
-  <footer>Tap an exercise for form cues and bench angle. Stars are saved on this device only.</footer>
+  <footer>Tap an exercise for photos, form cues and bench angle. Stars are saved on this device only.<br />Exercise photos from <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener">free-exercise-db</a> (public domain).</footer>
 </main>
 
 <script>
@@ -654,6 +671,153 @@
       c: ['High plank, drive the knees in alternately; hips stay low.'] }
   ];
 
+  // Start/finish photos, keyed by exercise name. Values are image file stems in
+  // img/ (from the public-domain free-exercise-db). Some show a close variation.
+  var IMG = {
+    "Barbell bench press": "Barbell_Bench_Press_-_Medium_Grip",
+    "Incline barbell bench press": "Barbell_Incline_Bench_Press_-_Medium_Grip",
+    "Decline barbell bench press": "Decline_Barbell_Bench_Press",
+    "Barbell floor press": "Floor_Press",
+    "Close-grip bench press": "Close-Grip_Barbell_Bench_Press",
+    "Dumbbell bench press": "Dumbbell_Bench_Press",
+    "Incline dumbbell press": "Incline_Dumbbell_Press",
+    "Low-incline dumbbell press": "Incline_Dumbbell_Press",
+    "Decline dumbbell press": "Decline_Dumbbell_Bench_Press",
+    "Incline squeeze press": "Incline_Dumbbell_Bench_With_Palms_Facing_In",
+    "Dumbbell squeeze press": "Dumbbell_Bench_Press_with_Neutral_Grip",
+    "Dumbbell floor press": "Dumbbell_Floor_Press",
+    "Flat dumbbell fly": "Dumbbell_Flyes",
+    "Incline dumbbell fly": "Incline_Dumbbell_Flyes",
+    "Decline dumbbell fly": "Decline_Dumbbell_Flyes",
+    "Dumbbell pullover": "Straight-Arm_Dumbbell_Pullover",
+    "Svend press": "Svend_Press",
+    "Push-up": "Pushups",
+    "Wide push-up": "Push-Up_Wide",
+    "Decline push-up (feet on bench)": "Push-Ups_With_Feet_Elevated",
+    "Incline push-up (hands on bench)": "Incline_Push-Up",
+    "Diamond push-up": "Push-Ups_-_Close_Triceps_Position",
+    "Barbell bent-over row": "Bent_Over_Barbell_Row",
+    "Underhand barbell row": "Reverse_Grip_Bent-Over_Rows",
+    "One-arm dumbbell row": "One-Arm_Dumbbell_Row",
+    "Chest-supported incline row": "Dumbbell_Incline_Row",
+    "Two-dumbbell bent-over row": "Bent_Over_Two-Dumbbell_Row_With_Palms_In",
+    "Kroc row": "One-Arm_Dumbbell_Row",
+    "Meadows row": "One-Arm_Long_Bar_Row",
+    "Renegade row": "Alternating_Renegade_Row",
+    "Table / inverted row": "Inverted_Row",
+    "Incline dumbbell shrug": "Middle_Back_Shrug",
+    "Barbell shrug": "Barbell_Shrug",
+    "Dumbbell shrug": "Dumbbell_Shrug",
+    "Barbell deadlift": "Barbell_Deadlift",
+    "Good morning": "Good_Morning",
+    "Bench back extension": "Hyperextensions_With_No_Hyperextension_Bench",
+    "Superman": "Superman",
+    "Standing barbell overhead press": "Standing_Military_Press",
+    "Seated barbell press": "Seated_Barbell_Military_Press",
+    "Seated dumbbell shoulder press": "Seated_Dumbbell_Press",
+    "Arnold press": "Arnold_Dumbbell_Press",
+    "Standing dumbbell press": "Standing_Dumbbell_Press",
+    "Dumbbell lateral raise": "Side_Lateral_Raise",
+    "Seated lateral raise": "Seated_Side_Lateral_Raise",
+    "Wide-grip upright row": "Upright_Barbell_Row",
+    "Dumbbell upright row": "Standing_Dumbbell_Upright_Row",
+    "Dumbbell front raise": "Front_Dumbbell_Raise",
+    "Barbell front raise": "Standing_Front_Barbell_Raise_Over_Head",
+    "Incline front raise": "Front_Incline_Dumbbell_Raise",
+    "Bent-over rear-delt fly": "Seated_Bent-Over_Rear_Delt_Raise",
+    "Chest-supported rear-delt fly": "Reverse_Flyes",
+    "Wide-grip rear-delt barbell row": "Barbell_Rear_Delt_Row",
+    "Side-lying external rotation": "External_Rotation",
+    "Wall handstand hold": "Handstand_Push-Ups",
+    "Barbell curl": "Barbell_Curl",
+    "Wide-grip barbell curl": "Wide-Grip_Standing_Barbell_Curl",
+    "Close-grip barbell curl": "Close-Grip_Standing_Barbell_Curl",
+    "Barbell drag curl": "Drag_Curl",
+    "Dumbbell curl (supinating)": "Dumbbell_Bicep_Curl",
+    "Incline dumbbell curl": "Incline_Dumbbell_Curl",
+    "Lying dumbbell curl": "Lying_Supine_Dumbbell_Curl",
+    "Spider curl": "Dumbbell_Prone_Incline_Curl",
+    "Bench preacher curl": "Standing_One-Arm_Dumbbell_Curl_Over_Incline_Bench",
+    "Concentration curl": "Concentration_Curls",
+    "Wide (out) dumbbell curl": "Standing_Inner-Biceps_Curl",
+    "Hammer curl": "Hammer_Curls",
+    "Cross-body hammer curl": "Cross_Body_Hammer_Curl",
+    "Reverse barbell curl": "Reverse_Barbell_Curl",
+    "Zottman curl": "Zottman_Curl",
+    "Barbell skull crusher": "Lying_Close-Grip_Barbell_Triceps_Extension_Behind_The_Head",
+    "Incline skull crusher": "Incline_Barbell_Triceps_Extension",
+    "Decline skull crusher": "Decline_EZ_Bar_Triceps_Extension",
+    "Dumbbell skull crusher": "Lying_Dumbbell_Tricep_Extension",
+    "Seated overhead dumbbell extension": "Seated_Triceps_Press",
+    "Single-arm overhead extension": "Dumbbell_One-Arm_Triceps_Extension",
+    "Overhead barbell extension": "Standing_Overhead_Barbell_Triceps_Extension",
+    "Dumbbell kickback": "Tricep_Dumbbell_Kickback",
+    "JM press": "JM_Press",
+    "Tate press": "Tate_Press",
+    "Bench dip": "Bench_Dips",
+    "Bench triceps extension (bodyweight)": "Body_Tricep_Press",
+    "Barbell wrist curl": "Palms-Up_Barbell_Wrist_Curl_Over_A_Bench",
+    "Behind-the-back wrist curl": "Standing_Palms-Up_Barbell_Behind_The_Back_Wrist_Curl",
+    "Dumbbell wrist curl": "Palms-Up_Dumbbell_Wrist_Curl_Over_A_Bench",
+    "Reverse wrist curl": "Palms-Down_Wrist_Curl_Over_A_Bench",
+    "Dumbbell reverse wrist curl": "Palms-Down_Dumbbell_Wrist_Curl_Over_A_Bench",
+    "Farmer’s carry": "Farmers_Walk",
+    "Goblet squat": "Goblet_Squat",
+    "Dumbbell squat": "Dumbbell_Squat",
+    "Barbell front squat": "Front_Barbell_Squat",
+    "Barbell back squat": "Barbell_Full_Squat",
+    "Zercher squat": "Zercher_Squats",
+    "Barbell hack squat": "Barbell_Hack_Squat",
+    "Bulgarian split squat (quad focus)": "Split_Squat_with_Dumbbells",
+    "Step-up": "Dumbbell_Step_Ups",
+    "Reverse lunge": "Dumbbell_Rear_Lunge",
+    "Walking lunge": "Dumbbell_Lunges",
+    "Barbell lunge": "Barbell_Lunge",
+    "Bodyweight squat": "Bodyweight_Squat",
+    "Jump squat": "Freehand_Jump_Squat",
+    "Sissy squat": "Weighted_Sissy_Squat",
+    "Pistol squat": "Kettlebell_Pistol_Squat",
+    "Barbell Romanian deadlift": "Romanian_Deadlift",
+    "Dumbbell Romanian deadlift": "Stiff-Legged_Dumbbell_Deadlift",
+    "Single-leg Romanian deadlift": "Kettlebell_One-Legged_Deadlift",
+    "Stiff-leg deadlift": "Stiff-Legged_Barbell_Deadlift",
+    "Nordic curl": "Natural_Glute_Ham_Raise",
+    "Sliding leg curl": "Platform_Hamstring_Slides",
+    "Dumbbell swing": "Vertical_Swing",
+    "Sumo deadlift": "Sumo_Deadlift",
+    "Sumo / plié goblet squat": "Plie_Dumbbell_Squat",
+    "Lateral lunge": "Barbell_Side_Split_Squat",
+    "Standing dumbbell calf raise": "Standing_Dumbbell_Calf_Raise",
+    "Barbell calf raise": "Standing_Barbell_Calf_Raise",
+    "Seated calf raise": "Dumbbell_Seated_One-Leg_Calf_Raise",
+    "Barbell hip thrust": "Barbell_Hip_Thrust",
+    "Single-leg hip thrust": "Single_Leg_Glute_Bridge",
+    "Barbell glute bridge": "Barbell_Glute_Bridge",
+    "Glute bridge": "Butt_Lift_Bridge",
+    "Bulgarian split squat (glute focus)": "Split_Squat_with_Dumbbells",
+    "Deficit reverse lunge": "Dumbbell_Rear_Lunge",
+    "Donkey kick": "Glute_Kickback",
+    "Crunch": "Crunches",
+    "Weighted crunch": "Crunches",
+    "Decline sit-up": "Sit-Up",
+    "Decline crunch": "Decline_Crunch",
+    "Lying leg raise on bench": "Flat_Bench_Lying_Leg_Raise",
+    "Incline reverse crunch": "Decline_Reverse_Crunch",
+    "Reverse crunch": "Reverse_Crunch",
+    "Flutter kicks": "Flutter_Kicks",
+    "V-up": "Jackknife_Sit-Up",
+    "Russian twist": "Russian_Twist",
+    "Bicycle crunch": "Air_Bike",
+    "Dumbbell side bend": "Dumbbell_Side_Bend",
+    "Side plank": "Side_Bridge",
+    "Landmine rotation": "Landmine_180s",
+    "Heel taps": "Alternate_Heel_Touchers",
+    "Plank": "Plank",
+    "Dead bug": "Dead_Bug",
+    "Barbell rollout": "Barbell_Ab_Rollout_-_On_Knees",
+    "Mountain climbers": "Mountain_Climbers"
+  };
+
   // ---- Helpers -------------------------------------------------------------
   var STORE = 'home-workouts:v1';
   var mem = {};
@@ -833,7 +997,7 @@
       } }
     }, [
       el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
-      el('div', { class: 'ex-main' }, [el('div', { class: 'ex-name', text: ex.n }), tags])
+      el('div', { class: 'ex-main' }, [el('div', { class: 'ex-name' }, [ex.n, IMG[ex.n] ? el('span', { class: 'cam', title: 'Has photos', text: '📷' }) : null]), tags])
     ]);
 
     var star = el('button', {
@@ -850,10 +1014,31 @@
     var top = el('div', { style: 'display:flex;align-items:flex-start' }, [head, el('div', { style: 'padding:12px 10px 0 0' }, [star])]);
     head.style.flex = '1';
 
+    var photos = null, src = null, stem = IMG[ex.n];
+    if (stem) {
+      // Images sit inside the collapsed body, so loading="lazy" defers them
+      // until the card is opened.
+      photos = el('div', { class: 'photos' }, ['Start', 'Finish'].map(function (label, k) {
+        return el('figure', null, [
+          el('img', { src: 'img/' + stem + '_' + k + '.jpg', alt: ex.n + ' — ' + label.toLowerCase() + ' position', loading: 'lazy', width: '480', height: '320' }),
+          el('figcaption', { text: label })
+        ]);
+      }));
+      var shown = stem.replace(/_/g, ' ').replace(/ - /g, ' – ');
+      src = el('p', { class: 'photo-src', text: 'Photo: ' + shown + (shown.toLowerCase() === ex.n.toLowerCase() ? '' : ' (same movement or a close variation)') });
+    }
+    var demo = el('a', {
+      class: 'demo', target: '_blank', rel: 'noopener',
+      href: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.n + ' exercise form'),
+      text: '▶ Watch a demo on YouTube'
+    });
+
     var body = el('div', { class: 'ex-body' }, [
+      photos, src,
       el('ul', null, ex.c.map(function (c) { return el('li', { text: c }); })),
       ex.x ? el('p', { class: 'note', text: '⚠️ ' + ex.x }) : null,
-      el('p', { class: 'level', text: LEVEL[ex.l] || '' })
+      el('p', { class: 'level', text: LEVEL[ex.l] || '' }),
+      demo
     ]);
     wrap.appendChild(top);
     wrap.appendChild(body);
