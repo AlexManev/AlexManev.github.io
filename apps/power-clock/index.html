@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>Power Tariff Clock</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0e14;
+      --panel: #141922;
+      --line: #252c3a;
+      --text: #e8ebf2;
+      --muted: #8d97a8;
+      --overnight: #6c8cff;
+      --free: #3ddc84;
+      --midday: #f5c542;
+      --peak: #ff5a5f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    main { max-width: 980px; margin: 0 auto; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+    }
+    h1 { margin: 0; font-size: 1.25rem; font-weight: 650; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+    a.back:hover { color: var(--text); }
+    .controls { display: flex; gap: 8px; }
+    .controls button {
+      font: inherit; font-size: 0.85rem; color: var(--text);
+      background: var(--panel); border: 1px solid var(--line);
+      padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    }
+    .controls button[aria-pressed="true"] { border-color: var(--text); }
+
+    .layout {
+      display: grid; gap: 20px; align-items: center;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 820px) {
+      .layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+    }
+
+    .dial-wrap { width: 100%; max-width: 520px; margin: 0 auto; }
+    svg { display: block; width: 100%; height: auto; }
+    .seg { transition: opacity 0.4s; }
+    .tick { stroke: var(--muted); }
+    .tick-label { fill: var(--muted); font-size: 15px; text-anchor: middle; dominant-baseline: central; }
+    .c-time { fill: var(--text); font-size: 64px; font-weight: 300; text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+    .c-sec { fill: var(--muted); font-size: 18px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .c-zone { font-size: 20px; font-weight: 700; text-anchor: middle; letter-spacing: 2px; }
+    .c-rate { fill: var(--text); font-size: 30px; font-weight: 600; text-anchor: middle; }
+    .c-next { fill: var(--muted); font-size: 15px; text-anchor: middle; }
+
+    .side { display: grid; gap: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; padding: 14px 16px;
+    }
+    .card h2 {
+      margin: 0 0 10px; font-size: 0.75rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted);
+    }
+    .zone {
+      display: grid; grid-template-columns: 12px 1fr auto; gap: 4px 12px;
+      align-items: center; padding: 10px; border-radius: 10px;
+      border: 1px solid transparent;
+    }
+    .zone + .zone { margin-top: 4px; }
+    .zone .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .zone .name { font-weight: 600; }
+    .zone .hours { color: var(--muted); font-size: 0.85rem; grid-column: 2; }
+    .zone .price { font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; grid-row: 1; grid-column: 3; }
+    .zone .sub { color: var(--muted); font-size: 0.8rem; text-align: right; grid-column: 3; }
+    .zone.active { background: rgba(255,255,255,0.05); border-color: var(--zc); }
+    .zone .now {
+      display: none; font-size: 0.65rem; font-weight: 700; letter-spacing: 1px;
+      padding: 2px 6px; border-radius: 6px; background: var(--zc); color: var(--bg);
+      margin-left: 6px; vertical-align: 2px;
+    }
+    .zone.active .now { display: inline-block; }
+    .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+    .row span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .note { color: var(--muted); font-size: 0.78rem; line-height: 1.45; margin: 10px 0 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .seg { transition: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="back" href="../../">← Back to home</a>
+    <div class="controls">
+      <button id="fmt" type="button" aria-pressed="false">24h</button>
+      <button id="wake" type="button" aria-pressed="false" hidden>Keep screen on</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="dial-wrap">
+      <svg id="dial" viewBox="0 0 500 500" role="img" aria-label="24-hour clock showing the current electricity tariff zone">
+        <g id="segments"></g>
+        <g id="ticks"></g>
+        <g id="hand">
+          <line id="hand-line" x1="250" y1="122" x2="250" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round" />
+          <circle id="hand-dot" cx="250" cy="34" r="11" fill="#fff" stroke="#0b0e14" stroke-width="4" />
+        </g>
+        <circle cx="250" cy="250" r="128" fill="#0b0e14" />
+        <text id="c-zone" class="c-zone" x="250" y="172">—</text>
+        <text id="c-time" class="c-time" x="250" y="240">--:--</text>
+        <text id="c-sec" class="c-sec" x="250" y="270"></text>
+        <text id="c-rate" class="c-rate" x="250" y="312">—</text>
+        <text id="c-next" class="c-next" x="250" y="342"></text>
+      </svg>
+    </div>
+
+    <div class="side">
+      <section class="card">
+        <h2>Usage charge · incl. GST</h2>
+        <div id="zones"></div>
+      </section>
+      <section class="card">
+        <h2>Other charges</h2>
+        <div class="row"><span>Daily supply charge</span><span>128.24 c/day</span></div>
+        <div class="row"><span>Retailer feed-in tariff</span><span>1.00 c/kWh</span></div>
+        <p class="note">The free window covers the first 24 kWh used between 11am and 2pm each day; anything above that is charged at 19.76 c/kWh. Times follow this device's local clock.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Tariff zones, minutes from midnight. A zone may wrap past midnight.
+  const ZONES = [
+    { id: 'overnight', name: 'Off-peak', start: 21 * 60, end: 11 * 60, rate: '24.78', color: 'var(--overnight)', hex: '#6c8cff' },
+    { id: 'free',      name: 'Free',     start: 11 * 60, end: 14 * 60, rate: '0.00',  color: 'var(--free)',      hex: '#3ddc84',
+      sub: 'first 24 kWh', extra: 'then 19.76c' },
+    { id: 'midday',    name: 'Shoulder', start: 14 * 60, end: 16 * 60, rate: '19.76', color: 'var(--midday)',    hex: '#f5c542' },
+    { id: 'peak',      name: 'Peak',     start: 16 * 60, end: 21 * 60, rate: '49.82', color: 'var(--peak)',      hex: '#ff5a5f' },
+  ];
+
+  const CX = 250, CY = 250, R = 205, RING = 34;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  let use24 = false;
+  try { use24 = localStorage.getItem('power-clock-24h') === '1'; } catch (e) {}
+
+  const angleOf = (mins) => (mins / 1440) * 2 * Math.PI; // 0 = midnight at top
+  const pt = (mins, r) => {
+    const a = angleOf(mins);
+    return [CX + r * Math.sin(a), CY - r * Math.cos(a)];
+  };
+  const inZone = (z, m) => z.start < z.end ? (m >= z.start && m < z.end) : (m >= z.start || m < z.end);
+
+  function arcPath(start, end, r) {
+    const span = ((end - start) + 1440) % 1440 || 1440;
+    const [x1, y1] = pt(start, r);
+    const [x2, y2] = pt(start + span, r);
+    const large = span > 720 ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  }
+
+  function fmtHour(h, short) {
+    if (use24) return String(h).padStart(2, '0') + (short ? '' : ':00');
+    const ampm = h < 12 ? 'am' : 'pm';
+    const h12 = h % 12 || 12;
+    return h12 + ampm;
+  }
+
+  function build() {
+    const segs = document.getElementById('segments');
+    segs.innerHTML = '';
+    // faint track
+    const track = document.createElementNS(SVG_NS, 'circle');
+    track.setAttribute('cx', CX); track.setAttribute('cy', CY); track.setAttribute('r', R);
+    track.setAttribute('fill', 'none'); track.setAttribute('stroke', '#1a202b');
+    track.setAttribute('stroke-width', RING + 6);
+    segs.appendChild(track);
+    for (const z of ZONES) {
+      const p = document.createElementNS(SVG_NS, 'path');
+      p.setAttribute('d', arcPath(z.start, z.end, R));
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', z.hex);
+      p.setAttribute('stroke-width', RING);
+      p.setAttribute('class', 'seg');
+      p.dataset.zone = z.id;
+      segs.appendChild(p);
+      // thin divider at the start of each zone
+      const [ax, ay] = pt(z.start, R - RING / 2 - 2);
+      const [bx, by] = pt(z.start, R + RING / 2 + 2);
+      const d = document.createElementNS(SVG_NS, 'line');
+      d.setAttribute('x1', ax); d.setAttribute('y1', ay); d.setAttribute('x2', bx); d.setAttribute('y2', by);
+      d.setAttribute('stroke', '#0b0e14'); d.setAttribute('stroke-width', 3);
+      segs.appendChild(d);
+    }
+
+    const ticks = document.getElementById('ticks');
+    ticks.innerHTML = '';
+    for (let h = 0; h < 24; h++) {
+      const major = h % 3 === 0;
+      const [x1, y1] = pt(h * 60, R - RING / 2 - 6);
+      const [x2, y2] = pt(h * 60, R - RING / 2 - (major ? 16 : 10));
+      const t = document.createElementNS(SVG_NS, 'line');
+      t.setAttribute('x1', x1); t.setAttribute('y1', y1); t.setAttribute('x2', x2); t.setAttribute('y2', y2);
+      t.setAttribute('class', 'tick'); t.setAttribute('stroke-width', major ? 2 : 1);
+      ticks.appendChild(t);
+      if (major) {
+        const [lx, ly] = pt(h * 60, R - RING / 2 - 32);
+        const l = document.createElementNS(SVG_NS, 'text');
+        l.setAttribute('x', lx); l.setAttribute('y', ly); l.setAttribute('class', 'tick-label');
+        l.textContent = fmtHour(h, true);
+        ticks.appendChild(l);
+      }
+    }
+
+    const list = document.getElementById('zones');
+    list.innerHTML = '';
+    for (const z of ZONES) {
+      const el = document.createElement('div');
+      el.className = 'zone';
+      el.dataset.zone = z.id;
+      el.style.setProperty('--zc', z.color);
+      el.innerHTML = `
+        <span class="dot" style="background:${z.color}"></span>
+        <span class="name">${z.name}<span class="now">NOW</span></span>
+        <span class="price">${z.rate}c/kWh</span>
+        <span class="hours">${fmtHour(z.start / 60)} – ${fmtHour(z.end / 60)}</span>
+        <span class="sub">${z.sub ? z.sub + (z.extra ? ', ' + z.extra : '') : ''}</span>`;
+      list.appendChild(el);
+    }
+    document.getElementById('fmt').textContent = use24 ? '24h' : '12h';
+    document.getElementById('fmt').setAttribute('aria-pressed', String(use24));
+  }
+
+  function untilText(mins) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+  }
+
+  let lastZone = null;
+  function tick() {
+    const now = new Date();
+    const mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const zone = ZONES.find((z) => inZone(z, Math.floor(mins)));
+
+    // hand
+    const deg = (mins / 1440) * 360;
+    document.getElementById('hand').setAttribute('transform', `rotate(${deg} ${CX} ${CY})`);
+    document.getElementById('hand-dot').setAttribute('cy', CY - R);
+    document.getElementById('hand-dot').setAttribute('fill', zone.hex);
+
+    // centre readout
+    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+    const timeStr = use24
+      ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      : `${h % 12 || 12}:${String(m).padStart(2, '0')}`;
+    document.getElementById('c-time').textContent = timeStr;
+    document.getElementById('c-sec').textContent =
+      `${String(s).padStart(2, '0')}s${use24 ? '' : (h < 12 ? ' · AM' : ' · PM')}`;
+    const zEl = document.getElementById('c-zone');
+    zEl.textContent = zone.name.toUpperCase();
+    zEl.setAttribute('fill', zone.hex);
+    document.getElementById('c-rate').textContent = zone.id === 'free' ? '0.00c/kWh*' : `${zone.rate}c/kWh`;
+
+    const idx = ZONES.indexOf(zone);
+    const next = ZONES[(idx + 1) % ZONES.length];
+    const left = Math.ceil(((zone.end - mins) + 1440) % 1440);
+    document.getElementById('c-next').textContent = `${next.name} in ${untilText(left)}`;
+
+    if (zone.id !== lastZone) {
+      lastZone = zone.id;
+      document.querySelectorAll('.seg').forEach((p) => {
+        p.style.opacity = p.dataset.zone === zone.id ? '1' : '0.28';
+      });
+      document.querySelectorAll('.zone').forEach((el) => {
+        el.classList.toggle('active', el.dataset.zone === zone.id);
+      });
+      document.title = `${zone.name} · ${zone.rate}c — Power Tariff Clock`;
+    }
+  }
+
+  document.getElementById('fmt').addEventListener('click', () => {
+    use24 = !use24;
+    try { localStorage.setItem('power-clock-24h', use24 ? '1' : '0'); } catch (e) {}
+    build(); lastZone = null; tick();
+  });
+
+  // Optional: keep the screen awake when used as a wall dashboard.
+  if ('wakeLock' in navigator) {
+    const btn = document.getElementById('wake');
+    btn.hidden = false;
+    let lock = null, wanted = false;
+    const acquire = async () => {
+      try { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); }
+      catch (e) { wanted = false; }
+      btn.setAttribute('aria-pressed', String(wanted && !!lock));
+    };
+    btn.addEventListener('click', async () => {
+      wanted = !wanted;
+      if (wanted) await acquire(); else { if (lock) await lock.release(); btn.setAttribute('aria-pressed', 'false'); }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (wanted && document.visibilityState === 'visible' && !lock) acquire();
+    });
+  }
+
+  build();
+  tick();
+  // Align updates to the start of each second.
+  setTimeout(() => { tick(); setInterval(tick, 1000); }, 1000 - (Date.now() % 1000));
+</script>
+</body>
+</html>
