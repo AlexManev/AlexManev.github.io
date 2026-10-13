@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Power Tariff Clock",
+      "description": "A 24-hour clock dashboard that shows the time and which electricity tariff zone you're in right now — peak, off-peak, shoulder or the free midday window — with rates and a countdown to the next change.",
+      "path": "apps/power-clock/",
+      "tags": ["clock", "electricity", "energy", "tariff", "power", "dashboard", "time", "peak", "off-peak"],
+      "emoji": "⚡"
+    },
+    {
       "title": "Lo-Fi Beat Maker",
       "description": "Plug in your headphones and make chill lo-fi beats: tap a drum grid, pick jazzy chords that always fit, jam on in-key pads, and add vinyl crackle, tape wobble and rain.",
       "path": "apps/lofi-beat-maker/",
