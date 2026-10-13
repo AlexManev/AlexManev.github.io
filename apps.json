@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Lo-Fi Beat Maker",
+      "description": "Plug in your headphones and make chill lo-fi beats: tap a drum grid, pick jazzy chords that always fit, jam on in-key pads, and add vinyl crackle, tape wobble and rain.",
+      "path": "apps/lofi-beat-maker/",
+      "tags": ["music", "beats", "lofi", "lo-fi", "drums", "sequencer", "chill", "instrument", "creative"],
+      "emoji": "🎧"
+    },
+    {
       "title": "Home Workout Ideas",
       "description": "Pick a body part and the exact area you want to hit — upper chest, lats, inner biceps, quads, hamstrings — and get every exercise you can do with a barbell, dumbbells, an adjustable bench or bodyweight.",
       "path": "apps/home-workouts/",
