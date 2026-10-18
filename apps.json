@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Vintage Camera",
+      "description": "A film-look camera for your phone: squircle viewfinder, six film stocks, grain, light leaks and an orange date stamp burned into every shot. Photos stay on your device.",
+      "path": "apps/vintage-camera/",
+      "tags": ["camera", "photo", "vintage", "film", "retro", "date stamp", "filter", "mobile"],
+      "emoji": "📷"
+    },
+    {
       "title": "Power Tariff Clock",
       "description": "A 24-hour clock dashboard that shows the time and which electricity tariff zone you're in right now — peak, off-peak, shoulder or the free midday window — with rates and a countdown to the next change.",
       "path": "apps/power-clock/",

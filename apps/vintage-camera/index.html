@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vintage Cam" />
+  <title>Vintage Camera</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000;
+      --chip: #1b1b1d;
+      --chip-line: #2c2c30;
+      --text: #f2efe9;
+      --muted: #8e8a83;
+      --stamp: #ff8a2b;
+      --accent: #ffb25e;
+      --ring: #6b7380;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+    button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    svg { display: block; }
+
+    .app {
+      height: 100vh;
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+    }
+
+    /* ---------- top bar ---------- */
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 10px 16px 4px;
+    }
+    .top-mid { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center;
+      color: var(--text); text-decoration: none;
+      background: var(--chip);
+    }
+    .pill {
+      height: 34px; padding: 0 12px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--chip); font-size: 13px; font-weight: 600;
+      color: var(--muted); letter-spacing: 0.02em;
+    }
+    .pill.on { color: var(--accent); }
+    .pill .mono { font-family: "Courier New", Courier, monospace; font-weight: 700; }
+    .thumb {
+      width: 40px; height: 40px; border-radius: 10px; overflow: hidden;
+      background: var(--chip); display: grid; place-items: center; color: var(--muted);
+      border: 1.5px solid #3a3a3e;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb img.develop { animation: develop 1.6s ease-out; }
+    @keyframes develop {
+      0% { filter: sepia(1) brightness(2.2) contrast(0.4); transform: scale(1.25); }
+      30% { transform: scale(1); }
+      100% { filter: none; }
+    }
+
+    /* ---------- viewfinder ---------- */
+    .stage {
+      display: grid; place-items: center;
+      padding: 10px 12px;
+      min-height: 0;
+      container-type: size;
+    }
+    .vf {
+      position: relative;
+      width: min(100%, 62vh);
+      width: min(100cqw, 100cqh, 640px);
+      aspect-ratio: 1 / 1;
+      background: #0d0b09;
+      overflow: hidden;
+      touch-action: pan-y;
+      --vf: 300px;
+    }
+    .vf canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .stamp {
+      position: absolute; left: 0; right: 0; top: 88.5%;
+      transform: translateY(-50%);
+      text-align: center; line-height: 1;
+      font-family: "Courier New", Courier, monospace; font-weight: 700;
+      font-size: calc(var(--vf) * 0.05);
+      letter-spacing: 0.08em;
+      color: var(--stamp);
+      text-shadow: 0 0 calc(var(--vf) * 0.012) rgba(255, 90, 20, 0.85);
+      opacity: 0.92;
+      pointer-events: none;
+      white-space: pre;
+    }
+    .stamp[hidden] { display: none; }
+    .countdown {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-family: "Courier New", Courier, monospace; font-weight: 700;
+      font-size: calc(var(--vf) * 0.3); color: rgba(255, 245, 230, 0.92);
+      text-shadow: 0 2px 20px rgba(0,0,0,0.6);
+      pointer-events: none;
+    }
+    .countdown:empty { display: none; }
+    .countdown span { animation: tick 1s ease-out; }
+    @keyframes tick { from { transform: scale(1.4); opacity: 0; } 25% { opacity: 1; } to { transform: scale(1); } }
+    .blink { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+    .blink.go { animation: blink 0.32s ease-out; }
+    @keyframes blink { 0% { opacity: 1; } 40% { opacity: 1; } 100% { opacity: 0; } }
+    .toast {
+      position: absolute; top: 9%; left: 50%; transform: translateX(-50%);
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.04em; opacity: 0; transition: opacity 0.25s; pointer-events: none;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .toast.show { opacity: 1; }
+    .vf-msg {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      padding: 14%; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.45;
+    }
+    .vf-msg[hidden] { display: none; }
+    .vf-msg button {
+      margin-top: 14px; padding: 10px 20px; border-radius: 999px;
+      background: var(--text); color: #000; font-weight: 700;
+    }
+
+    /* ---------- film chips ---------- */
+    .films {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding: 4px 16px 12px;
+      scrollbar-width: none; scroll-snap-type: x proximity;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+    }
+    .films::-webkit-scrollbar { display: none; }
+    .films::before, .films::after { content: ""; flex: 0 0 calc(50% - 60px); }
+    .film {
+      flex: none; scroll-snap-align: center;
+      height: 32px; padding: 0 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); background: transparent; border: 1px solid var(--chip-line);
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .film[aria-pressed="true"] { color: #1a0f05; background: var(--accent); border-color: var(--accent); }
+
+    /* ---------- controls ---------- */
+    .controls {
+      display: flex; align-items: center; justify-content: center;
+      gap: clamp(32px, 11vw, 64px);
+      padding: 6px 16px 22px;
+    }
+    .round {
+      width: 58px; height: 58px; border-radius: 50%;
+      display: grid; place-items: center; background: #1c1c1e; color: #fff;
+    }
+    .round.on { color: #ffd34d; }
+    .round:active { transform: scale(0.94); }
+    .flip-anim { transition: transform 0.45s ease; }
+    .shutter {
+      width: 84px; height: 84px; border-radius: 50%;
+      border: 7px solid var(--ring);
+      display: grid; place-items: center;
+      background: transparent;
+    }
+    .shutter span {
+      width: 64px; height: 64px; border-radius: 50%; background: #fff;
+      transition: transform 0.12s ease, background 0.2s;
+    }
+    .shutter:active span, .shutter.busy span { transform: scale(0.86); }
+    .shutter.timing span { background: var(--accent); }
+    .shutter:disabled { opacity: 0.4; }
+
+    .screen-flash {
+      position: fixed; inset: 0; background: #fffaf0; opacity: 0;
+      pointer-events: none; z-index: 50; transition: opacity 0.08s;
+    }
+    .screen-flash.on { opacity: 1; }
+
+    /* hidden but still decoding (iOS stops updating display:none videos) */
+    #video { position: fixed; width: 2px; height: 2px; opacity: 0; pointer-events: none; left: 0; top: 0; }
+
+    /* ---------- gallery ---------- */
+    .sheet {
+      position: fixed; inset: 0; z-index: 20; background: #0a0a0b;
+      display: flex; flex-direction: column;
+      padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+      animation: up 0.28s ease-out;
+    }
+    .sheet[hidden] { display: none; }
+    @keyframes up { from { transform: translateY(24px); opacity: 0; } }
+    .sheet-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; gap: 12px;
+    }
+    .sheet-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+    .sheet-head .sub { color: var(--muted); font-size: 13px; font-weight: 500; margin-left: 6px; }
+    .grid {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+      padding: 0 3px 16px; align-content: start;
+    }
+    @media (min-width: 600px) { .grid { grid-template-columns: repeat(5, 1fr); } }
+    .grid button { aspect-ratio: 1; overflow: hidden; background: #161616; }
+    .grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .empty { padding: 48px 24px; text-align: center; color: var(--muted); line-height: 1.5; grid-column: 1 / -1; }
+    .note { padding: 8px 16px 14px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.4; }
+
+    .viewer { background: #000; z-index: 30; }
+    .viewer-img { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px; }
+    .viewer-img img {
+      max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+      -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default;
+    }
+    .viewer-bar { display: flex; justify-content: space-between; gap: 12px; padding: 12px 20px 20px; }
+    .btn {
+      flex: 1; height: 48px; border-radius: 14px; font-weight: 700; font-size: 15px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: #1c1c1e;
+    }
+    .btn.primary { background: var(--accent); color: #1a0f05; }
+    .btn.danger { color: #ff6b5e; flex: 0 0 auto; padding: 0 18px; }
+
+    /* ---------- landscape phones ---------- */
+    @media (orientation: landscape) and (max-height: 600px) {
+      .app {
+        grid-template-rows: minmax(0, 1fr);
+        grid-template-columns: auto minmax(0, 1fr) auto;
+      }
+      .top { flex-direction: column; justify-content: space-between; padding: 12px 6px 12px 12px; }
+      .top-mid { flex-direction: column; }
+      .stage { grid-column: 2; grid-row: 1; padding: 8px; }
+      .films { display: none; }
+      .controls { grid-column: 3; grid-row: 1; flex-direction: column-reverse; padding: 12px 16px 12px 6px; gap: 22px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <a class="icon-btn" href="../../" aria-label="Back to home" title="Back to home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+      <div class="top-mid">
+        <button class="pill" id="timerBtn" aria-label="Self-timer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+          <span id="timerLabel">Off</span>
+        </button>
+        <button class="pill" id="stampBtn" aria-label="Date stamp">
+          <span class="mono" id="stampLabel">TIME</span>
+        </button>
+      </div>
+      <button class="thumb" id="galleryBtn" aria-label="Open your photos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg>
+      </button>
+    </header>
+
+    <main class="stage">
+      <div class="vf" id="vf">
+        <canvas id="gl"></canvas>
+        <div class="stamp" id="stampEl"></div>
+        <div class="countdown" id="countdown"></div>
+        <div class="blink" id="blink"></div>
+        <div class="toast" id="toast"></div>
+        <div class="vf-msg" id="msg"><div><div id="msgText">Opening camera…</div></div></div>
+      </div>
+    </main>
+
+    <nav class="films" id="films" aria-label="Film stock"></nav>
+
+    <footer class="controls">
+      <button class="round" id="flashBtn" aria-label="Flash off"></button>
+      <button class="shutter" id="shutter" aria-label="Take photo"><span></span></button>
+      <button class="round flip-anim" id="flipBtn" aria-label="Switch camera">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 0 1 14.5-3.5M20 14a8 8 0 0 1-14.5 3.5"/><path d="M19 3v4h-4M5 21v-4h4"/></svg>
+      </button>
+    </footer>
+  </div>
+
+  <div class="screen-flash" id="screenFlash"></div>
+  <video id="video" playsinline muted autoplay></video>
+
+  <section class="sheet" id="gallery" hidden aria-label="Your photos">
+    <div class="sheet-head">
+      <h2>Photos<span class="sub" id="count"></span></h2>
+      <button class="icon-btn" id="galleryClose" aria-label="Back to camera">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="note">Photos stay on this phone, inside this app. Tap one and use <b>Save / Share</b> to put it in your camera roll.</div>
+  </section>
+
+  <section class="sheet viewer" id="viewer" hidden aria-label="Photo">
+    <div class="sheet-head">
+      <button class="icon-btn" id="viewerClose" aria-label="Back to photos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="sub" id="viewerDate"></span>
+      <span style="width:40px"></span>
+    </div>
+    <div class="viewer-img"><img id="viewerImg" alt="Your photo" /></div>
+    <div class="viewer-bar">
+      <button class="btn danger" id="deleteBtn">Delete</button>
+      <button class="btn primary" id="shareBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+        Save / Share
+      </button>
+    </div>
+  </section>
+
+  <script>
+  (() => {
+    'use strict';
+    const $ = (s) => document.querySelector(s);
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // ---------- film stocks ----------
+    // Every value is a shader uniform; switching film eases between them.
+    const FILMS = [
+      { name: 'Gold 200', exposure: 1.04, contrast: 1.06, saturation: 1.12, warmth: 0.05, fade: 0.07,
+        fadeColor: [0.16, 0.10, 0.05], shadow: [-0.01, 0.0, 0.03], high: [0.05, 0.025, -0.03],
+        grain: 0.07, vignette: 0.5, mono: 0, leak: 0.0, distort: 0.14, aberr: 0.004 },
+      { name: 'Dusk', exposure: 1.02, contrast: 1.1, saturation: 1.05, warmth: 0.03, fade: 0.08,
+        fadeColor: [0.05, 0.08, 0.14], shadow: [-0.03, 0.0, 0.06], high: [0.07, 0.03, -0.04],
+        grain: 0.08, vignette: 0.6, mono: 0, leak: 0.0, distort: 0.16, aberr: 0.005 },
+      { name: 'Portra', exposure: 1.06, contrast: 0.96, saturation: 0.92, warmth: 0.025, fade: 0.1,
+        fadeColor: [0.14, 0.11, 0.10], shadow: [0.0, 0.01, 0.02], high: [0.04, 0.01, 0.0],
+        grain: 0.06, vignette: 0.35, mono: 0, leak: 0.0, distort: 0.1, aberr: 0.003 },
+      { name: 'Chrome', exposure: 1.0, contrast: 1.2, saturation: 1.3, warmth: 0.015, fade: 0.02,
+        fadeColor: [0.05, 0.04, 0.06], shadow: [0.0, 0.0, 0.02], high: [0.03, 0.0, -0.02],
+        grain: 0.05, vignette: 0.55, mono: 0, leak: 0.0, distort: 0.12, aberr: 0.003 },
+      { name: 'Instant', exposure: 1.08, contrast: 0.88, saturation: 0.85, warmth: 0.02, fade: 0.17,
+        fadeColor: [0.20, 0.24, 0.20], shadow: [-0.02, 0.03, 0.03], high: [0.05, 0.03, -0.02],
+        grain: 0.06, vignette: 0.4, mono: 0, leak: 0.35, distort: 0.12, aberr: 0.004 },
+      { name: 'Mono', exposure: 1.03, contrast: 1.22, saturation: 1.0, warmth: 0.0, fade: 0.06,
+        fadeColor: [0.10, 0.10, 0.10], shadow: [0.0, 0.0, 0.0], high: [0.015, 0.01, 0.0],
+        grain: 0.12, vignette: 0.55, mono: 1, leak: 0.0, distort: 0.14, aberr: 0.0 },
+    ];
+    const KEYS = Object.keys(FILMS[0]).filter((k) => k !== 'name');
+
+    // ---------- settings (per-device convenience) ----------
+    const SKEY = 'vintage-camera:settings';
+    const state = Object.assign(
+      { film: 0, stamp: 'time', flash: false, timer: 0, facing: 'environment' },
+      (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } })()
+    );
+    if (!FILMS[state.film]) state.film = 0;
+    const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {} };
+
+    // ---------- photo storage (IndexedDB, in-memory fallback) ----------
+    const store = (() => {
+      let mem = null; // set when IndexedDB is unavailable
+      let dbp = null;
+      const open = () => dbp || (dbp = new Promise((res, rej) => {
+        try {
+          const r = indexedDB.open('vintage-camera', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('photos', { keyPath: 'id' });
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        } catch (e) { rej(e); }
+      }));
+      const run = async (mode, fn) => {
+        const db = await open();
+        return new Promise((res, rej) => {
+          const t = db.transaction('photos', mode);
+          const req = fn(t.objectStore('photos'));
+          t.oncomplete = () => res(req && req.result);
+          t.onerror = () => rej(t.error);
+        });
+      };
+      const fallback = (e) => { console.warn('Photo storage unavailable, keeping photos in memory', e); mem = mem || []; };
+      return {
+        async all() {
+          if (!mem) try { return ((await run('readonly', (s) => s.getAll())) || []).sort((a, b) => b.id - a.id); } catch (e) { fallback(e); }
+          return mem.slice();
+        },
+        async add(p) {
+          if (!mem) try { await run('readwrite', (s) => s.put(p)); return; } catch (e) { fallback(e); }
+          mem.unshift(p);
+        },
+        async remove(id) {
+          if (!mem) try { await run('readwrite', (s) => s.delete(id)); return; } catch (e) { fallback(e); }
+          mem = mem.filter((p) => p.id !== id);
+        },
+      };
+    })();
+
+    // ---------- DOM ----------
+    const video = $('#video');
+    const canvas = $('#gl');
+    const vf = $('#vf');
+    const stampEl = $('#stampEl');
+    const msg = $('#msg'), msgText = $('#msgText');
+    const shutterBtn = $('#shutter'), flashBtn = $('#flashBtn'), flipBtn = $('#flipBtn');
+    const countdownEl = $('#countdown'), blinkEl = $('#blink'), toastEl = $('#toast');
+    const screenFlash = $('#screenFlash');
+
+    // ---------- WebGL film renderer ----------
+    const VERT = `
+      attribute vec2 aPos;
+      varying vec2 vUv;
+      void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+    const FRAG = `
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+      #else
+      precision mediump float;
+      #endif
+      varying vec2 vUv;
+      uniform sampler2D uTex;
+      uniform vec4 uCrop;
+      uniform float uMirror, uSeed, uFlash, uGrainScale;
+      uniform float uExposure, uContrast, uSaturation, uWarmth, uFade, uGrain, uVignette, uMono, uLeak, uDistort, uAberr;
+      uniform vec3 uFadeColor, uShadow, uHigh;
+
+      vec3 samp(vec2 uv) {
+        uv = clamp(uv, 0.0, 1.0);
+        float u = uMirror > 0.5 ? 1.0 - uv.x : uv.x;
+        return texture2D(uTex, vec2(uCrop.x + u * uCrop.z, uCrop.y + (1.0 - uv.y) * uCrop.w)).rgb;
+      }
+      float hash(vec2 p) {
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+      void main() {
+        vec2 p = vUv - 0.5;
+        float r2 = dot(p, p);
+        // gentle barrel distortion, normalised so the corners stay put
+        vec2 d = p * (1.0 + uDistort * r2) / (1.0 + uDistort * 0.5);
+        vec2 ca = d * uAberr * r2 * 4.0;
+        vec3 c = vec3(samp(d + 0.5 + ca).r, samp(d + 0.5).g, samp(d + 0.5 - ca).b);
+
+        // on-camera flash: hot centre, falls off to the edges
+        c *= uExposure * (1.0 + uFlash * 0.3 * (1.0 - smoothstep(0.0, 0.6, length(p))));
+
+        float l = dot(c, vec3(0.299, 0.587, 0.114));
+        c = mix(vec3(l), c, uSaturation);
+        c = mix(c, vec3(l), uMono);
+        c += vec3(uWarmth, uWarmth * 0.3, -uWarmth);
+        c = (c - 0.5) * (uContrast + uFlash * 0.08) + 0.5;
+
+        l = clamp(dot(c, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+        c += mix(uShadow, uHigh, smoothstep(0.1, 0.9, l));
+
+        // light leak from the top-right edge
+        float lk = 1.0 - smoothstep(0.0, 0.85, distance(vUv, vec2(1.08, 0.82)));
+        c += vec3(1.0, 0.42, 0.12) * lk * lk * uLeak;
+        c = clamp(c, 0.0, 1.0);
+
+        // faded blacks
+        c = c * (1.0 - uFade) + uFade * mix(uFadeColor, vec3(1.0), c);
+
+        float v = smoothstep(0.2, 0.75, length(p));
+        c *= 1.0 - uVignette * v * v;
+
+        c += (hash(gl_FragCoord.xy + uSeed) - 0.5) * uGrain * uGrainScale;
+        gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+      }`;
+
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, alpha: false, antialias: false })
+      || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: true, alpha: false });
+    const U = {};
+    if (gl) {
+      const sh = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+        return s;
+      };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'aPos');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      ['uTex', 'uCrop', 'uMirror', 'uSeed', 'uFlash', 'uGrainScale']
+        .concat(KEYS.map((k) => 'u' + k[0].toUpperCase() + k.slice(1)))
+        .forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      gl.uniform1i(U.uTex, 0);
+    }
+
+    // live params ease toward the selected film
+    const cur = JSON.parse(JSON.stringify(FILMS[state.film]));
+    const ease = (k) => {
+      const t = FILMS[state.film];
+      for (const key of KEYS) {
+        if (Array.isArray(t[key])) for (let i = 0; i < 3; i++) cur[key][i] += (t[key][i] - cur[key][i]) * k;
+        else cur[key] += (t[key] - cur[key]) * k;
+      }
+    };
+
+    let mirror = false;
+    const hasFrame = () => video.readyState >= 2 && video.videoWidth > 0;
+    const upload = () => gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+    function draw(w, h, { seed, flash = 0, grainScale = 1 }) {
+      const vw = video.videoWidth, vh = video.videoHeight, s = Math.min(vw, vh);
+      gl.viewport(0, 0, w, h);
+      gl.uniform4f(U.uCrop, (vw - s) / 2 / vw, (vh - s) / 2 / vh, s / vw, s / vh);
+      gl.uniform1f(U.uMirror, mirror ? 1 : 0);
+      gl.uniform1f(U.uSeed, seed);
+      gl.uniform1f(U.uFlash, flash);
+      gl.uniform1f(U.uGrainScale, grainScale);
+      for (const k of KEYS) {
+        const n = 'u' + k[0].toUpperCase() + k.slice(1);
+        if (Array.isArray(cur[k])) gl.uniform3fv(U[n], cur[k]); else gl.uniform1f(U[n], cur[k]);
+      }
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    let paused = false;
+    function frame() {
+      requestAnimationFrame(frame);
+      if (!gl || paused || capturing || !hasFrame()) return;
+      ease(0.18);
+      upload();
+      draw(canvas.width, canvas.height, { seed: Math.random() * 500 });
+    }
+
+    // ---------- squircle viewfinder ----------
+    (function squircle() {
+      const n = 4.2, pts = [];
+      for (let i = 0; i < 160; i++) {
+        const t = (i / 160) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+        const x = 50 + 50 * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
+        const y = 50 + 50 * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
+        pts.push(x.toFixed(2) + '% ' + y.toFixed(2) + '%');
+      }
+      vf.style.clipPath = 'polygon(' + pts.join(',') + ')';
+      vf.style.webkitClipPath = vf.style.clipPath;
+    })();
+
+    function resize() {
+      const r = vf.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const px = Math.max(1, Math.round(r.width * dpr));
+      if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
+      vf.style.setProperty('--vf', r.width + 'px');
+    }
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(vf);
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ---------- date stamp ----------
+    const pad = (n) => String(n).padStart(2, '0');
+    function stampText(d) {
+      if (state.stamp === 'time') return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      if (state.stamp === 'date') return "'" + pad(d.getFullYear() % 100) + ' ' + pad(d.getMonth() + 1) + ' ' + pad(d.getDate());
+      return '';
+    }
+    function renderStamp() {
+      const t = stampText(new Date());
+      stampEl.hidden = !t;
+      stampEl.textContent = t;
+      $('#stampLabel').textContent = { time: 'TIME', date: 'DATE', off: 'NO STAMP' }[state.stamp];
+      $('#stampBtn').classList.toggle('on', state.stamp !== 'off');
+    }
+    function drawStamp(ctx, s, d) {
+      const t = stampText(d);
+      if (!t) return;
+      const size = s * 0.05;
+      ctx.save();
+      ctx.font = `700 ${size}px "Courier New", Courier, monospace`;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = (size * 0.08) + 'px';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = '#ff8a2b';
+      ctx.shadowColor = 'rgba(255, 90, 20, 0.85)';
+      ctx.shadowBlur = s * 0.012;
+      ctx.fillText(t, s / 2, s * 0.885);
+      ctx.shadowBlur = s * 0.004;
+      ctx.fillText(t, s / 2, s * 0.885);
+      ctx.restore();
+    }
+    setInterval(renderStamp, 1000);
+    renderStamp();
+
+    // ---------- camera ----------
+    let stream = null, track = null, hasTorch = false, starting = null;
+
+    function showMsg(text, retry) {
+      msg.hidden = false;
+      msgText.innerHTML = '';
+      msgText.append(text);
+      if (retry) {
+        const b = document.createElement('button');
+        b.textContent = 'Try again';
+        b.onclick = startCamera;
+        msgText.append(document.createElement('br'), b);
+      }
+    }
+    function stopStream() {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null; track = null; hasTorch = false;
+      video.srcObject = null;
+    }
+    async function startCamera() {
+      if (starting) return starting;
+      starting = (async () => {
+        if (!gl) { showMsg('This browser can’t run the film effects (WebGL is turned off).'); return; }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showMsg('Camera isn’t available here. Open this page over https in Safari or Chrome.');
+          return;
+        }
+        stopStream();
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: state.facing }, width: { ideal: 1920 }, height: { ideal: 1440 } },
+          });
+        } catch (e) {
+          const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+          showMsg(denied
+            ? 'Camera access is blocked. Allow the camera for this site in your browser settings, then try again.'
+            : 'Couldn’t open the camera' + (e && e.message ? ' (' + e.message + ')' : '') + '.', true);
+          return;
+        }
+        track = stream.getVideoTracks()[0];
+        const settings = track.getSettings ? track.getSettings() : {};
+        const facing = settings.facingMode || state.facing;
+        mirror = facing === 'user';
+        try { hasTorch = !!(track.getCapabilities && track.getCapabilities().torch); } catch (e) { hasTorch = false; }
+        video.srcObject = stream;
+        try { await video.play(); } catch (e) {}
+        msg.hidden = true;
+        renderFlash();
+      })();
+      try { await starting; } finally { starting = null; }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopStream();
+      else startCamera();
+    });
+
+    // ---------- controls ----------
+    const FLASH_ON = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2L5 13.5h5.5L9.5 22 19 9.5h-5.6z"/></svg>';
+    const FLASH_OFF = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M13.5 2L5 13.5h5.5L9.5 22 19 9.5h-5.6z"/><path d="M3.5 3.5l17 17"/></svg>';
+    function renderFlash() {
+      flashBtn.innerHTML = state.flash ? FLASH_ON : FLASH_OFF;
+      flashBtn.classList.toggle('on', state.flash);
+      flashBtn.setAttribute('aria-label', state.flash ? 'Flash on' : 'Flash off');
+    }
+    flashBtn.onclick = () => { state.flash = !state.flash; persist(); renderFlash(); toast(state.flash ? 'Flash on' : 'Flash off'); };
+
+    let flipTurns = 0;
+    flipBtn.onclick = async () => {
+      if (capturing) return;
+      state.facing = state.facing === 'user' ? 'environment' : 'user';
+      persist();
+      flipTurns++;
+      flipBtn.style.transform = 'rotate(' + flipTurns * 180 + 'deg)';
+      blink();
+      await startCamera();
+    };
+
+    const TIMERS = [0, 3, 10];
+    function renderTimer() {
+      $('#timerLabel').textContent = state.timer ? state.timer + 's' : 'Off';
+      $('#timerBtn').classList.toggle('on', !!state.timer);
+    }
+    $('#timerBtn').onclick = () => {
+      state.timer = TIMERS[(TIMERS.indexOf(state.timer) + 1) % TIMERS.length];
+      persist(); renderTimer();
+    };
+    $('#stampBtn').onclick = () => {
+      const order = ['time', 'date', 'off'];
+      state.stamp = order[(order.indexOf(state.stamp) + 1) % order.length];
+      persist(); renderStamp();
+    };
+
+    // film chips + swipe
+    const filmsEl = $('#films');
+    FILMS.forEach((f, i) => {
+      const b = document.createElement('button');
+      b.className = 'film';
+      b.textContent = f.name;
+      b.onclick = () => setFilm(i);
+      filmsEl.append(b);
+    });
+    let toastTimer;
+    function toast(text) {
+      toastEl.textContent = text;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1100);
+    }
+    function setFilm(i, quiet) {
+      state.film = (i + FILMS.length) % FILMS.length;
+      persist();
+      [...filmsEl.children].forEach((b, j) => b.setAttribute('aria-pressed', String(j === state.film)));
+      const active = filmsEl.children[state.film];
+      if (active && active.scrollIntoView) {
+        active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: quiet ? 'auto' : 'smooth' });
+      }
+      if (!quiet) toast(FILMS[state.film].name);
+    }
+    let sx = null, sy = null;
+    vf.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
+    vf.addEventListener('pointerup', (e) => {
+      if (sx == null) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      sx = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.3) setFilm(state.film + (dx < 0 ? 1 : -1));
+    });
+    vf.addEventListener('pointercancel', () => { sx = null; });
+
+    // ---------- shutter ----------
+    let audioCtx = null;
+    function click() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const sr = audioCtx.sampleRate, len = Math.floor(sr * 0.16);
+        const buf = audioCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+        // two short noise bursts: curtain open, curtain close
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const a = Math.exp(-t * 180) + (t > 0.085 ? 0.7 * Math.exp(-(t - 0.085) * 150) : 0);
+          d[i] = (Math.random() * 2 - 1) * a;
+        }
+        const src = audioCtx.createBufferSource(), bp = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+        bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.8;
+        g.gain.value = 0.55;
+        src.buffer = buf;
+        src.connect(bp).connect(g).connect(audioCtx.destination);
+        src.start();
+      } catch (e) {}
+    }
+    function blink() {
+      blinkEl.classList.remove('go');
+      void blinkEl.offsetWidth;
+      blinkEl.classList.add('go');
+    }
+
+    let capturing = false, counting = null;
+    async function countdown(sec) {
+      const token = {};
+      counting = token;
+      shutterBtn.classList.add('timing');
+      try {
+        for (let n = sec; n > 0; n--) {
+          if (counting !== token) return false;
+          countdownEl.innerHTML = '<span>' + n + '</span>';
+          if (navigator.vibrate) navigator.vibrate(15);
+          await sleep(1000);
+        }
+        return counting === token;
+      } finally {
+        if (counting === token) counting = null;
+        countdownEl.innerHTML = '';
+        shutterBtn.classList.remove('timing');
+      }
+    }
+
+    async function grab() {
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const s = Math.min(vw, vh, 2048);
+      const previewW = canvas.width;
+      ease(1);
+      canvas.width = canvas.height = s;
+      upload();
+      draw(s, s, { seed: Math.random() * 500, flash: state.flash ? 1 : 0, grainScale: Math.sqrt(Math.max(1, s / previewW)) });
+      const out = document.createElement('canvas');
+      out.width = out.height = s;
+      const ctx = out.getContext('2d');
+      ctx.drawImage(canvas, 0, 0);
+      drawStamp(ctx, s, new Date());
+      canvas.width = canvas.height = previewW;
+      return new Promise((res) => out.toBlob(res, 'image/jpeg', 0.92));
+    }
+
+    async function shoot() {
+      if (counting) { counting = null; return; } // tap again to cancel the timer
+      if (capturing || !gl || !hasFrame()) return;
+      if (state.timer && !(await countdown(state.timer))) return;
+      if (!hasFrame()) return;
+      capturing = true;
+      shutterBtn.classList.add('busy');
+      let torchOn = false;
+      try {
+        if (state.flash) {
+          if (hasTorch && !mirror) {
+            try { await track.applyConstraints({ advanced: [{ torch: true }] }); torchOn = true; await sleep(450); } catch (e) {}
+          }
+          if (!torchOn) { screenFlash.classList.add('on'); await sleep(mirror ? 380 : 140); }
+        }
+        click();
+        if (navigator.vibrate) navigator.vibrate(30);
+        blink();
+        const blob = await grab();
+        if (!blob) throw new Error('Could not encode photo');
+        const photo = { id: Date.now(), created: new Date().toISOString(), blob };
+        await store.add(photo);
+        setThumb(photo, true);
+      } catch (e) {
+        console.error(e);
+        toast('Couldn’t save that photo');
+      } finally {
+        if (torchOn) track && track.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
+        screenFlash.classList.remove('on');
+        shutterBtn.classList.remove('busy');
+        capturing = false;
+      }
+    }
+    shutterBtn.onclick = shoot;
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === ' ' || e.key === 'Enter') && document.activeElement === document.body && $('#gallery').hidden) {
+        e.preventDefault(); shoot();
+      }
+      if (e.key === 'ArrowRight' && $('#gallery').hidden) setFilm(state.film + 1);
+      if (e.key === 'ArrowLeft' && $('#gallery').hidden) setFilm(state.film - 1);
+    });
+
+    // ---------- gallery ----------
+    const urls = new Map();
+    const urlFor = (p) => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.blob)); return urls.get(p.id); };
+    const dropUrl = (id) => { if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); } };
+
+    function setThumb(p, fresh) {
+      const btn = $('#galleryBtn');
+      if (!p) {
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg>';
+        return;
+      }
+      const img = new Image();
+      img.alt = '';
+      img.src = urlFor(p);
+      if (fresh) img.className = 'develop';
+      btn.replaceChildren(img);
+    }
+
+    let photos = [], viewing = null;
+    async function openGallery() {
+      photos = await store.all();
+      const grid = $('#grid');
+      grid.replaceChildren();
+      $('#count').textContent = photos.length ? String(photos.length) : '';
+      if (!photos.length) {
+        const e = document.createElement('div');
+        e.className = 'empty';
+        e.textContent = 'No photos yet. Go take one!';
+        grid.append(e);
+      }
+      for (const p of photos) {
+        const b = document.createElement('button');
+        b.setAttribute('aria-label', 'Photo from ' + new Date(p.created).toLocaleString());
+        const img = new Image();
+        img.loading = 'lazy';
+        img.alt = '';
+        img.src = urlFor(p);
+        b.append(img);
+        b.onclick = () => openViewer(p);
+        grid.append(b);
+      }
+      $('#gallery').hidden = false;
+      paused = true;
+    }
+    function closeGallery() { $('#gallery').hidden = true; paused = false; }
+    function openViewer(p) {
+      viewing = p;
+      $('#viewerImg').src = urlFor(p);
+      $('#viewerDate').textContent = new Date(p.created).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      $('#viewer').hidden = false;
+    }
+    function closeViewer() { $('#viewer').hidden = true; viewing = null; }
+
+    $('#galleryBtn').onclick = openGallery;
+    $('#galleryClose').onclick = closeGallery;
+    $('#viewerClose').onclick = closeViewer;
+
+    $('#shareBtn').onclick = async () => {
+      if (!viewing) return;
+      const d = new Date(viewing.created);
+      const name = 'vintage-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.jpg';
+      const file = new File([viewing.blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); } catch (e) { /* cancelled */ }
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = urlFor(viewing);
+      a.download = name;
+      document.body.append(a);
+      a.click();
+      a.remove();
+    };
+    $('#deleteBtn').onclick = async () => {
+      if (!viewing || !confirm('Delete this photo?')) return;
+      const id = viewing.id;
+      await store.remove(id);
+      closeViewer();
+      dropUrl(id);
+      await openGallery();
+      setThumb(photos[0]);
+    };
+
+    // ---------- start ----------
+    renderFlash();
+    renderTimer();
+    setFilm(state.film, true);
+    store.all().then((all) => setThumb(all[0])).catch(() => {});
+    requestAnimationFrame(frame);
+    startCamera();
+  })();
+  </script>
+</body>
+</html>
