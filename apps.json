@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Garden Planner",
+      "description": "Your one-stop veg and fruit garden planner: design beds row by row with companion checks, get sowing, planting and harvest dates for your location, and keep a pruning and care calendar for every fruit tree.",
+      "path": "apps/garden-planner/",
+      "tags": ["garden", "gardening", "vegetables", "fruit trees", "planting", "pruning", "calendar", "companion planting", "planner", "harvest"],
+      "emoji": "🌱"
+    },
+    {
       "title": "Vintage Camera",
       "description": "A film-look camera for your phone: squircle viewfinder, six film stocks, grain, light leaks and an orange date stamp burned into every shot. Photos stay on your device.",
       "path": "apps/vintage-camera/",

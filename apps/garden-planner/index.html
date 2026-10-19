@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Garden Planner</title>
+  <meta name="description" content="Plan your vegetable beds, get sowing, planting and harvest dates for your location, and keep a pruning calendar for your fruit trees — all on your own device." />
+  <meta name="theme-color" content="#f4f1ea" />
+  <meta name="color-scheme" content="light" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B1%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css?v=2026-10-19" />
+</head>
+<body>
+  <header class="top" id="top">
+    <a class="home" href="../../">← Back to home</a>
+    <h1 id="pageTitle">Today</h1>
+    <button class="round" id="settingsBtn" type="button" aria-label="Settings">⚙︎</button>
+  </header>
+
+  <main id="view" class="wrap" aria-live="polite"></main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Sections">
+    <button type="button" data-tab="today" aria-selected="true"><span class="ico" aria-hidden="true">🏡</span>Today</button>
+    <button type="button" data-tab="garden" aria-selected="false"><span class="ico" aria-hidden="true">🪴</span>Garden</button>
+    <button type="button" data-tab="season" aria-selected="false"><span class="ico" aria-hidden="true">📅</span>Season</button>
+    <button type="button" data-tab="trees" aria-selected="false"><span class="ico" aria-hidden="true">🌳</span>Trees</button>
+    <button type="button" data-tab="plants" aria-selected="false"><span class="ico" aria-hidden="true">🌱</span>Plants</button>
+  </nav>
+
+  <div id="sheetHost"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <!--
+    Plain static, no build step and no network calls at runtime. Split into
+    three files purely for readability:
+      styles.css  presentation
+      data.js     plants, timings, pruning guides and locations
+      app.js      state, date maths, rendering and interactions
+    They are ordinary scripts (not modules), so data.js must load before app.js.
+
+    IMPORTANT — bump the ?v= build stamp below (and BUILD in app.js) whenever
+    any of the three files changes, so a browser can never pair this page with
+    a cached older script. GP_BUILD lets app.js notice a mismatch and offer a
+    reload instead of failing silently.
+  -->
+  <script>window.GP_BUILD = '2026-10-19';</script>
+  <script src="data.js?v=2026-10-19"></script>
+  <script src="app.js?v=2026-10-19"></script>
+</body>
+</html>
