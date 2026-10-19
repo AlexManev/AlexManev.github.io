@@ -38,6 +38,7 @@
   /* ---------------------------------------------------------------- veg */
 
   add('tomato', 'Tomato', 'veg', '🍅', {
+    vic: 'Plant around Melbourne Cup Day (first Tuesday in November) once the soil has warmed; in Ballarat, the Macedon Ranges and the high country wait until mid–late November. Queensland fruit fly is now in northern Victoria and parts of Melbourne — hang traps from October.',
     fam: 'Nightshade', sun: 'Full sun, 6–8 h', water: 'Deep & regular', feed: 'Heavy feeder',
     sp: [50, 60], depth: 0.5, ind: 7, out: [1, 10], dtm: 70, hw: 12, frost: 't',
     good: ['basil', 'marigold', 'carrot', 'parsley', 'borage', 'chives', 'nasturtium', 'lettuce'],
@@ -50,6 +51,7 @@
     tips: 'Water at the base, not the leaves, and keep moisture even to avoid split fruit and blossom end rot. Rotate beds yearly — never follow potatoes or tomatoes.'
   });
   add('cherry-tomato', 'Cherry tomato', 'veg', '🍅', {
+    vic: 'Plant out from late October in Melbourne, mid-November in the cooler hills. Cherry types ripen best in Melbourne\'s short, changeable summers.',
     fam: 'Nightshade', sun: 'Full sun, 6–8 h', water: 'Deep & regular', feed: 'Heavy feeder',
     sp: [45, 50], depth: 0.5, ind: 7, out: [1, 12], dtm: 60, hw: 14, frost: 't',
     good: ['basil', 'marigold', 'carrot', 'parsley', 'borage', 'chives', 'nasturtium'],
@@ -59,6 +61,7 @@
     tips: 'The easiest tomato for pots — a 40 cm pot holds one plant. Pick often and it keeps cropping until the cold arrives.'
   });
   add('capsicum', 'Capsicum (sweet pepper)', 'veg', '🫑', {
+    vic: 'Melbourne springs are cool and capsicums sulk in cold soil — plant in November, a little after the tomatoes.',
     fam: 'Nightshade', sun: 'Full sun', water: 'Regular', feed: 'Moderate',
     sp: [45, 50], depth: 0.5, ind: 9, out: [2, 9], dtm: 75, hw: 12, frost: 't',
     good: ['basil', 'onion', 'carrot', 'marigold', 'parsley'], bad: ['bush-bean', 'climbing-bean'],
@@ -67,6 +70,7 @@
     tips: 'Peppers love warmth — wait until nights stay above 12 °C before planting out. Green fruit turns red, yellow or orange if left longer.'
   });
   add('chilli', 'Chilli', 'veg', '🌶️', {
+    vic: 'Plant in November once nights are warm. Potted chillies can be moved under cover to overwinter.',
     fam: 'Nightshade', sun: 'Full sun', water: 'Moderate', feed: 'Moderate',
     sp: [40, 45], depth: 0.5, ind: 9, out: [2, 9], dtm: 80, hw: 14, frost: 't',
     good: ['basil', 'onion', 'carrot', 'marigold'], bad: ['bush-bean', 'climbing-bean'],
@@ -75,6 +79,7 @@
     tips: 'Slightly dry conditions make hotter chillies. Plants can be overwintered in a pot in a frost-free spot.'
   });
   add('eggplant', 'Eggplant (aubergine)', 'veg', '🍆', {
+    vic: 'Needs the warmest, most sheltered spot — plant in November in Melbourne; easiest in the north (Mildura, Shepparton).',
     fam: 'Nightshade', sun: 'Full sun, hot', water: 'Regular', feed: 'Heavy feeder',
     sp: [55, 60], depth: 0.5, ind: 9, out: [3, 9], dtm: 80, hw: 10, frost: 't',
     good: ['bush-bean', 'basil', 'marigold', 'thyme'], bad: ['potato'],
@@ -83,6 +88,7 @@
     tips: 'Harvest while the skin is still glossy — dull skin means seedy, bitter fruit.'
   });
   add('cucumber', 'Cucumber', 'veg', '🥒', {
+    vic: 'Sow from late October to December in Melbourne, once the soil is warm.',
     fam: 'Cucurbit', sun: 'Full sun', water: 'Lots, consistent', feed: 'Moderate',
     sp: [40, 60], depth: 2, ind: 4, out: [2, 10], dir: [2, 10], dtm: 55, hw: 8, frost: 't', pref: 'direct',
     good: ['bush-bean', 'climbing-bean', 'pea', 'dill', 'nasturtium', 'lettuce', 'sunflower', 'corn', 'radish'],
@@ -92,6 +98,7 @@
     tips: 'Grow up a trellis to save space and keep fruit clean. Pick small and often — one overripe cucumber slows the whole plant.'
   });
   add('zucchini', 'Zucchini (courgette)', 'veg', '🥒', {
+    vic: 'Sow from late October in Melbourne; powdery mildew arrives with the cool, damp autumn — pull plants by April.',
     fx: 'saturate(1.4) brightness(.78)',
     fam: 'Cucurbit', sun: 'Full sun', water: 'Lots', feed: 'Heavy feeder',
     sp: [80, 90], depth: 2, ind: 4, out: [2, 10], dir: [2, 10], dtm: 50, hw: 10, frost: 't', pref: 'direct',
@@ -101,6 +108,7 @@
     tips: 'Two plants feed a family. Pick at 15–20 cm — they turn into marrows overnight.'
   });
   add('pumpkin', 'Pumpkin', 'veg', 'svg:pumpkin', {
+    vic: 'Sow by early December so they ripen before the cold — in Ballarat and the hills choose early varieties like Butternut.',
     fam: 'Cucurbit', sun: 'Full sun', water: 'Deep, weekly', feed: 'Heavy feeder',
     sp: [120, 150], depth: 2, ind: 4, out: [2, 6], dir: [2, 6], dtm: 100, hw: 4, frost: 't', pref: 'direct',
     good: ['corn', 'climbing-bean', 'nasturtium', 'marigold', 'borage'], bad: ['potato'],
@@ -124,6 +132,7 @@
     tips: 'Ready when it slips from the vine with a gentle push and smells sweet at the stem end.'
   });
   add('corn', 'Sweet corn', 'veg', '🌽', {
+    vic: 'Sow in a block from late October to December, once the soil reaches about 16 °C.',
     fam: 'Grass', sun: 'Full sun', water: 'Regular, critical at tasselling', feed: 'Heavy feeder',
     sp: [30, 45], depth: 3, ind: 3, out: [2, 8], dir: [2, 9], dtm: 80, hw: 3, frost: 't', pref: 'direct',
     good: ['climbing-bean', 'bush-bean', 'pumpkin', 'cucumber', 'zucchini', 'pea', 'sunflower'], bad: ['tomato'],
@@ -152,6 +161,7 @@
     tips: 'More beans per square metre than bush types and a longer harvest. Keep picking or the vine stops.'
   });
   add('pea', 'Peas (snow & sugar snap)', 'veg', '🫛', {
+    vic: 'Sow from March right through winter in Melbourne and on the coast; in Ballarat and the hills sow in autumn or wait for spring.',
     fam: 'Legume', sun: 'Full sun / part shade', water: 'Regular', feed: 'Light',
     sp: [5, 30], depth: 3, dir: [-6, 0], fd: [-12, -4], dtm: 65, hw: 6, frost: 'H', pref: 'direct',
     good: ['carrot', 'radish', 'cucumber', 'corn', 'lettuce', 'spinach', 'mint', 'coriander'],
@@ -160,7 +170,19 @@
     care: [[0, 'Add netting or a trellis for the tendrils', 'stake'], [21, 'Mulch to keep roots cool', 'care']],
     tips: 'A cool-season crop: sow in early spring or autumn, not in summer heat. Leave roots in the ground after harvest — they feed the soil.'
   });
+  add('broad-bean', 'Broad beans (fava)', 'veg', '🫛', {
+    vic: 'A Victorian winter staple: sow April–June, stake early against spring winds and harvest from September to November.',
+    fx: 'hue-rotate(-45deg) brightness(.85) saturate(1.2)',
+    fam: 'Legume', sun: 'Full sun', water: 'Moderate', feed: 'Light — fixes its own nitrogen',
+    sp: [20, 45], depth: 5, dir: [-8, -3], fd: [-8, 0], mw: 10, dtm: 100, hw: 8, frost: 'H', pref: 'direct',
+    good: ['potato', 'corn', 'lettuce', 'spinach', 'cabbage', 'carrot'],
+    bad: ['onion', 'garlic', 'leek', 'chives', 'spring-onion'],
+    pests: ['Black aphids', 'Snails'], dis: ['Chocolate spot', 'Rust'],
+    care: [[0, 'Put in stakes and string to hold the stems up', 'stake'], [70, 'Pinch out the tips once the lowest pods set — deters aphids', 'care']],
+    tips: 'A cool-season bean that grows through winter. Pick pods young for tender beans, or shell older ones. Leave the roots in the ground to feed the soil.'
+  });
   add('lettuce', 'Lettuce', 'veg', '🥬', {
+    vic: 'Grows most of the year in Melbourne — give summer sowings afternoon shade and use heat-tolerant types.',
     fam: 'Daisy', sun: 'Full sun / part shade in summer', water: 'Little and often', feed: 'Light',
     sp: [25, 25], depth: 0.5, ind: 4, out: [-3, 6], dir: [-4, 8], fo: [-10, -4], fd: [-10, -5], dtm: 45, hw: 4, frost: 'h',
     good: ['carrot', 'radish', 'strawberry', 'chives', 'beetroot', 'onion', 'cucumber', 'pea'],
@@ -170,6 +192,7 @@
     tips: 'Sow a few every 2–3 weeks. Pick outer leaves of loose-leaf types and the plant keeps going for weeks.'
   });
   add('spinach', 'Spinach', 'veg', '🥬', {
+    vic: 'Sow March to August — it bolts in Melbourne\'s hot spells.',
     fx: 'saturate(1.6) brightness(.82)',
     fam: 'Amaranth', sun: 'Part shade OK', water: 'Regular', feed: 'Moderate',
     sp: [10, 20], depth: 1, dir: [-6, -1], fd: [-8, -3], dtm: 40, hw: 5, frost: 'H', pref: 'direct',
@@ -186,6 +209,7 @@
     tips: 'Cut-and-come-again for months. Twist stalks off at the base, outer leaves first.'
   });
   add('kale', 'Kale', 'veg', '🥬', {
+    vic: 'Plant February–May; frost in the hills makes it sweeter.',
     fx: 'hue-rotate(38deg) brightness(.72) saturate(1.2)',
     fam: 'Brassica', sun: 'Full sun', water: 'Regular', feed: 'Heavy feeder',
     sp: [45, 45], depth: 1, ind: 5, out: [-4, 4], fo: [-14, -8], dtm: 55, hw: 16, frost: 'H',
@@ -196,6 +220,7 @@
     tips: 'Frost sweetens the leaves. Harvest from the bottom up and it grows tall like a little palm tree.'
   });
   add('broccoli', 'Broccoli', 'veg', '🥦', {
+    vic: 'Plant seedlings from February to May so heads form in the cool months, after the cabbage white butterflies have gone.',
     fam: 'Brassica', sun: 'Full sun', water: 'Regular', feed: 'Heavy feeder',
     sp: [45, 50], depth: 1, ind: 5, out: [-3, 1], fo: [-14, -8], dtm: 70, hw: 4, frost: 'H',
     good: ['dill', 'rosemary', 'thyme', 'onion', 'beetroot', 'nasturtium', 'potato'],
@@ -205,6 +230,7 @@
     tips: 'Cut the main head while the buds are tight, then keep picking the side shoots for weeks.'
   });
   add('cabbage', 'Cabbage', 'veg', 'svg:cabbage', {
+    vic: 'Plant from February to May for winter heads, or in August–September for early summer.',
     fam: 'Brassica', sun: 'Full sun', water: 'Regular', feed: 'Heavy feeder',
     sp: [45, 50], depth: 1, ind: 5, out: [-4, 0], fo: [-14, -10], dtm: 80, hw: 4, frost: 'H',
     good: ['dill', 'onion', 'rosemary', 'thyme', 'nasturtium', 'beetroot', 'spinach'],
@@ -214,6 +240,7 @@
     tips: 'Firm the soil well when planting — loose soil gives loose heads.'
   });
   add('cauliflower', 'Cauliflower', 'veg', 'svg:cauli', {
+    vic: 'Plant seedlings in February–March so heads form in the cool of winter.',
     fam: 'Brassica', sun: 'Full sun', water: 'Regular, never dry', feed: 'Heavy feeder',
     sp: [50, 60], depth: 1, ind: 5, out: [-3, 0], fo: [-16, -10], dtm: 85, hw: 3, frost: 'H',
     good: ['dill', 'onion', 'thyme', 'nasturtium', 'beetroot'], bad: ['tomato', 'cherry-tomato', 'strawberry'],
@@ -261,8 +288,9 @@
     tips: 'Ready in four weeks — great between slower crops and for kids.'
   });
   add('onion', 'Onion', 'veg', '🧅', {
+    vic: 'Sow or plant from March to June so bulbs swell as the days lengthen in spring; harvest November–January. Pick short- or intermediate-day varieties.',
     fam: 'Allium', sun: 'Full sun', water: 'Moderate, stop near harvest', feed: 'Moderate',
-    sp: [10, 25], depth: 1, ind: 10, out: [-4, 0], fo: [-14, -8], dtm: 110, hw: 4, frost: 'H',
+    sp: [10, 25], depth: 1, ind: 10, out: [-4, 0], dir: [-6, -2], fo: [-14, -8], fd: [-10, -2], dtm: 110, hw: 4, frost: 'H', pref: 'direct',
     good: ['carrot', 'beetroot', 'lettuce', 'tomato', 'capsicum', 'strawberry', 'cabbage', 'silverbeet'],
     bad: ['bush-bean', 'climbing-bean', 'pea'],
     pests: ['Onion thrips'], dis: ['Downy mildew', 'Neck rot'],
@@ -277,8 +305,9 @@
     tips: 'Sow a pinch every few weeks — or regrow bought ones from their roots in a glass of water.'
   });
   add('garlic', 'Garlic', 'veg', '🧄', {
+    vic: 'Plant cloves from March to June — the old Victorian rule is \'plant on the shortest day, harvest on the longest\', but March–April planting gives bigger bulbs. Harvest Nov–Dec.',
     fam: 'Allium', sun: 'Full sun', water: 'Moderate, stop 3 weeks before harvest', feed: 'Moderate',
-    sp: [12, 25], depth: 5, fd: [-6, 2], dtm: 230, hw: 3, frost: 'H', pref: 'direct',
+    sp: [12, 25], depth: 5, fd: [-8, 2], mw: 4, dtm: 185, sowAs: 'Plant garlic cloves', hw: 3, frost: 'H', pref: 'direct',
     good: ['tomato', 'carrot', 'beetroot', 'strawberry', 'apple', 'peach'], bad: ['bush-bean', 'climbing-bean', 'pea'],
     pests: ['Onion thrips'], dis: ['Rust', 'White rot'],
     care: [[150, 'Feed and keep weed-free as bulbs swell', 'feed'], [200, 'Cut off flower stalks (scapes) — they\'re edible', 'care']],
@@ -293,8 +322,9 @@
     tips: 'Stands in the ground through winter — harvest as needed.'
   });
   add('potato', 'Potato', 'veg', '🥔', {
+    vic: 'Plant seed potatoes from August (after frost in the hills) to November, and a second crop in January–February for autumn digging.',
     fam: 'Nightshade', sun: 'Full sun', water: 'Regular once flowering', feed: 'Heavy feeder',
-    sp: [30, 60], depth: 10, dir: [-3, 4], fd: [-20, -15], dtm: 100, hw: 4, frost: 't', pref: 'direct',
+    sp: [30, 60], depth: 10, dir: [-3, 4], sowAs: 'Plant seed potatoes', fd: [-20, -15], dtm: 100, hw: 4, frost: 't', pref: 'direct',
     good: ['bush-bean', 'corn', 'cabbage', 'marigold', 'nasturtium', 'kale', 'broccoli'],
     bad: ['tomato', 'cherry-tomato', 'cucumber', 'pumpkin', 'zucchini', 'sunflower', 'raspberry', 'spinach'],
     pests: ['Potato moth', 'Aphids'], dis: ['Late blight', 'Scab'],
@@ -312,6 +342,7 @@
   /* ---------------------------------------------------------------- herbs */
 
   add('basil', 'Basil', 'herb', '🌿', {
+    vic: 'Wait until November in Melbourne — one cold night blackens the leaves.',
     fam: 'Mint', sun: 'Full sun, warm', water: 'Regular', feed: 'Light',
     sp: [25, 30], depth: 0.5, ind: 5, out: [2, 10], dir: [2, 8], dtm: 30, hw: 14, frost: 't',
     good: ['tomato', 'cherry-tomato', 'capsicum', 'chilli', 'eggplant', 'lettuce'], bad: ['sage', 'thyme'],
@@ -328,6 +359,7 @@
     tips: 'Slow to germinate — soak seed overnight. A biennial: it flowers and dies in its second year.'
   });
   add('coriander', 'Coriander (cilantro)', 'herb', '🌿', {
+    vic: 'Sow in autumn (March–May) for a long winter harvest; spring sowings bolt as soon as it turns hot.',
     fx: 'hue-rotate(-14deg)',
     fam: 'Carrot', sun: 'Sun / part shade', water: 'Regular', feed: 'Light',
     sp: [15, 20], depth: 1, dir: [-3, 1], fd: [-12, -4], dtm: 45, hw: 4, frost: 'h', pref: 'direct',
@@ -443,6 +475,7 @@
   /* ---------------------------------------------------------------- fruit trees */
 
   add('apple', 'Apple', 'tree', '🍎', {
+    vic: 'Codling moth is the main Victorian apple pest — put out pheromone traps and trunk bands at blossom (October).',
     fam: 'Rose', sun: 'Full sun', water: 'Deep, weekly in summer', feed: 'Spring feed',
     sp: [400, 400], fruitIn: 3, form: 'Open centre or central leader', fruitOn: 'Short spurs on 2-year-old and older wood',
     pollination: 'Most varieties need a different apple (or crabapple) flowering nearby.',
@@ -463,6 +496,7 @@
     tips: 'Choose a dwarfing rootstock (M9, M26, MM106) for a small garden — or grow it as an espalier on a fence.'
   });
   add('pear', 'Pear', 'tree', '🍐', {
+    vic: 'Pears do well across Victoria. Watch for pear and cherry slug in summer.',
     fam: 'Rose', sun: 'Full sun', water: 'Deep, weekly in summer', feed: 'Spring feed',
     sp: [400, 400], fruitIn: 4, form: 'Central leader or open centre', fruitOn: 'Spurs on 2-year-old and older wood',
     pollination: 'Most need a second pear variety nearby.',
@@ -481,6 +515,7 @@
     tips: 'Never let pears ripen on the tree — they go gritty and brown inside.'
   });
   add('peach', 'Peach & nectarine', 'tree', '🍑', {
+    vic: 'Spray copper for leaf curl in late August–early September as buds swell, and again at leaf fall in May. Hang fruit-fly traps from November.',
     fam: 'Rose', sun: 'Full sun', water: 'Deep, weekly in fruiting', feed: 'Spring feed',
     sp: [400, 400], fruitIn: 2, form: 'Open vase', fruitOn: 'Last year\'s shoots (one-year-old wood)',
     pollination: 'Self-fertile — one tree is enough.',
@@ -499,6 +534,7 @@
     tips: 'Leaf curl is the big one: spray copper at leaf fall and again at bud swell, every year.'
   });
   add('plum', 'Plum', 'tree', 'svg:plum', {
+    vic: 'Prune after harvest in summer — Victorian winters are wet, which spreads silver leaf and canker through winter cuts.',
     fam: 'Rose', sun: 'Full sun', water: 'Deep, weekly in summer', feed: 'Spring feed',
     sp: [400, 400], fruitIn: 3, form: 'Open vase', fruitOn: 'Spurs on older wood and one-year-old shoots',
     pollination: 'Japanese plums usually need a second variety; many European plums are self-fertile.',
@@ -516,6 +552,7 @@
     tips: 'If silver leaf appears (silvery sheen on leaves), cut the branch back to clean wood in summer.'
   });
   add('cherry', 'Cherry', 'tree', '🍒', {
+    vic: 'Cherries love the cool nights of the Yarra Valley and high country; net by November.',
     fam: 'Rose', sun: 'Full sun', water: 'Deep, regular', feed: 'Spring feed',
     sp: [500, 500], fruitIn: 4, form: 'Open vase', fruitOn: 'Spurs on 2-year-old and older wood',
     pollination: 'Many need a pollinating partner — choose a self-fertile variety like Stella for one tree.',
@@ -532,6 +569,7 @@
     tips: 'Rain at ripening splits cherries — keep watering even, and pick promptly.'
   });
   add('apricot', 'Apricot', 'tree', '🍑', {
+    vic: 'Best in the drier north (Goulburn Valley, Sunraysia). In Melbourne choose a sunny, sheltered spot and prune only in dry summer weather.',
     fx: 'hue-rotate(14deg) saturate(1.25)',
     fam: 'Rose', sun: 'Full sun, sheltered', water: 'Deep, regular', feed: 'Spring feed',
     sp: [500, 500], fruitIn: 3, form: 'Open vase', fruitOn: 'Spurs and one-year-old shoots',
@@ -550,6 +588,7 @@
     tips: 'Plant in the warmest, most sheltered spot you have — early blossom is easily frosted.'
   });
   add('lemon', 'Lemon', 'tree', '🍋', {
+    vic: 'Melbourne\'s cold, wet winters often yellow citrus leaves — feed in September and again in late summer once the soil warms, not in winter. Meyer copes best with cold.',
     fam: 'Citrus', sun: 'Full sun, sheltered', water: 'Deep & even, mulch well', feed: 'Hungry — feed twice a year',
     sp: [300, 300], fruitIn: 2, form: 'Natural rounded shape', fruitOn: 'New growth',
     pollination: 'Self-fertile.',
@@ -567,6 +606,8 @@
     tips: 'Yellow leaves usually mean hunger or cold, wet roots. Frost-tender — protect young trees.'
   });
   add('lime', 'Lime', 'tree', '🍋', {
+    vic: 'The most cold-sensitive citrus: use the warmest north-facing spot or a pot, and cover it on frosty nights. Tahitian is the hardiest.',
+    needs: [8, 'Limes are the most frost-tender citrus — use your warmest spot or a pot you can move under cover.'],
     fx: 'hue-rotate(52deg) saturate(1.2)',
     fam: 'Citrus', sun: 'Full sun, warm', water: 'Deep & even', feed: 'Hungry — feed twice a year',
     sp: [300, 300], fruitIn: 2, form: 'Natural rounded shape', fruitOn: 'New growth',
@@ -585,6 +626,7 @@
     tips: 'The most cold-sensitive common citrus — a warm wall or pot you can move is ideal.'
   });
   add('mandarin', 'Mandarin & orange', 'tree', '🍊', {
+    vic: 'Feed in September and February–March. Imperial and Emperor mandarins and Washington navel oranges all suit Melbourne.',
     fam: 'Citrus', sun: 'Full sun, sheltered', water: 'Deep & even', feed: 'Hungry — feed twice a year',
     sp: [400, 400], fruitIn: 3, form: 'Natural rounded shape', fruitOn: 'New growth',
     pollination: 'Self-fertile.',
@@ -602,6 +644,7 @@
     tips: 'Mandarins can crop heavily one year and lightly the next — thin a big crop to even it out.'
   });
   add('fig', 'Fig', 'tree', 'svg:fig', {
+    vic: 'Figs thrive in Victoria — Brown Turkey is the reliable all-rounder. Net from January.',
     fam: 'Mulberry', sun: 'Full sun, hot', water: 'Moderate', feed: 'Light',
     sp: [400, 400], fruitIn: 2, form: 'Open bush or fan', fruitOn: 'Last year\'s and this year\'s shoots',
     pollination: 'Common figs are self-fertile.',
@@ -617,6 +660,8 @@
     tips: 'Restricting the roots (a pot or a lined pit) gives more fruit and less leaf.'
   });
   add('avocado', 'Avocado', 'tree', '🥑', {
+    vic: 'Only in a warm, sheltered, frost-free Melbourne microclimate — choose Hass, Bacon or Reed and protect young trees from frost.',
+    needs: [10, 'Avocados need a frost-free spot. In a cooler climate, plant against a warm, sheltered wall and protect young trees from frost.'],
     fam: 'Laurel', sun: 'Full sun, sheltered', water: 'Deep, never waterlogged', feed: 'Spring & summer',
     sp: [600, 600], fruitIn: 4, form: 'Natural; keep low', fruitOn: 'New growth',
     pollination: 'Fruit set improves with an A-type and B-type variety nearby.',
@@ -633,6 +678,7 @@
     tips: 'Needs excellent drainage — plant on a mound if your soil is heavy.'
   });
   add('olive', 'Olive', 'tree', '🫒', {
+    vic: 'Olives suit most of Victoria; harvest April–June.',
     fam: 'Olive', sun: 'Full sun', water: 'Low once established', feed: 'Light',
     sp: [500, 500], fruitIn: 4, form: 'Open vase', fruitOn: 'Last year\'s growth',
     pollination: 'Most are partly self-fertile; a second variety improves the crop.',
@@ -647,6 +693,7 @@
     tips: 'Tough, drought-hardy and long-lived. Fresh olives are inedibly bitter until brined.'
   });
   add('mango', 'Mango', 'tree', '🥭', {
+    needs: [14, 'Mango needs a frost-free tropical or subtropical climate — it won\'t fruit reliably here.'],
     fam: 'Cashew', sun: 'Full sun, hot', water: 'Regular, less in winter', feed: 'Spring & after harvest',
     sp: [600, 600], fruitIn: 4, form: 'Low, spreading', fruitOn: 'Mature terminal shoots',
     pollination: 'Self-fertile.',
@@ -662,6 +709,7 @@
     tips: 'Tropical/subtropical only — needs warm, frost-free conditions.'
   });
   add('feijoa', 'Feijoa', 'tree', 'svg:feijoa', {
+    vic: 'Very hardy in Victoria — fruit drops April–June.',
     fam: 'Myrtle', sun: 'Full sun', water: 'Moderate', feed: 'Light',
     sp: [300, 300], fruitIn: 3, form: 'Bushy shrub or small tree', fruitOn: 'New growth',
     pollination: 'Many varieties fruit better with a second variety nearby.',
@@ -679,6 +727,7 @@
   /* ---------------------------------------------------------------- berries & vines */
 
   add('strawberry', 'Strawberry', 'berry', '🍓', {
+    vic: 'Plant runners in autumn (April–May) or early spring, and net from October.',
     fam: 'Rose', sun: 'Full sun', water: 'Regular', feed: 'Moderate',
     sp: [30, 40], depth: 0, out: [-2, 4], fo: [-10, -4], dtm: 70, hw: 10, frost: 'H', pref: 'seedling', fruitIn: 0,
     form: 'Low clumps', fruitOn: 'Crowns', pollination: 'Self-fertile.',
@@ -696,6 +745,7 @@
     tips: 'Plant with the crown exactly at soil level — too deep rots, too high dries out.'
   });
   add('blueberry', 'Blueberry', 'berry', '🫐', {
+    vic: 'Grow in pots of acid potting mix if your soil is neutral or alkaline; Northern Highbush types suit the cooler hills.',
     fam: 'Heath', sun: 'Full sun', water: 'Regular — rainwater if possible', feed: 'Acid fertiliser',
     sp: [120, 150], fruitIn: 2, form: 'Multi-stemmed bush', fruitOn: '1–3 year-old canes',
     pollination: 'Better crops with two varieties.',
@@ -711,6 +761,7 @@
     tips: 'They need acidic soil — easiest in a large pot of azalea mix.'
   });
   add('raspberry', 'Raspberry', 'berry', 'svg:raspberry', {
+    vic: 'Raspberries love Victoria\'s cooler areas — the Yarra Valley and Dandenongs are ideal.',
     fam: 'Rose', sun: 'Full sun / light shade', water: 'Regular', feed: 'Spring feed',
     sp: [45, 150], fruitIn: 1, form: 'Canes on a wire trellis', fruitOn: 'Summer types: last year\'s canes · Autumn types: this year\'s canes',
     pollination: 'Self-fertile.',
@@ -741,6 +792,7 @@
     tips: 'Grow only thornless, non-invasive varieties — wild blackberry is a weed in many regions.'
   });
   add('grape', 'Grape', 'berry', '🍇', {
+    vic: 'Suits all of Victoria; prune in July–August and watch for downy mildew after spring rain.',
     fam: 'Grape', sun: 'Full sun', water: 'Low–moderate', feed: 'Light',
     sp: [200, 200], fruitIn: 2, form: 'Cordon on wires or a pergola', fruitOn: 'New shoots from last year\'s wood',
     pollination: 'Self-fertile.',
@@ -757,6 +809,7 @@
     tips: 'Bleeding sap after a late prune is harmless. Grow on a sunny fence, wall or pergola.'
   });
   add('passionfruit', 'Passionfruit', 'berry', 'svg:passion', {
+    vic: 'Grafted Nellie Kelly is the reliable Melbourne choice — plant in spring after frosts against a warm fence.',
     fam: 'Passionflower', sun: 'Full sun, sheltered', water: 'Regular', feed: 'Hungry',
     sp: [300, 300], fruitIn: 1, form: 'Vine on a strong trellis', fruitOn: 'New growth',
     pollination: 'Self-fertile; bees help.',
@@ -772,6 +825,7 @@
     tips: 'Rip out any suckers coming from below the graft straight away.'
   });
   add('kiwifruit', 'Kiwifruit', 'berry', '🥝', {
+    vic: 'Hayward plus a male pollinator grows well in Melbourne and Gippsland; protect new shoots from late frost.',
     fam: 'Kiwifruit', sun: 'Full sun, sheltered', water: 'Regular', feed: 'Spring feed',
     sp: [400, 400], fruitIn: 4, form: 'T-bar or pergola', fruitOn: 'New shoots from last year\'s canes',
     pollination: 'Needs a male vine for up to 8 female vines.',
@@ -790,6 +844,7 @@
   /* ---------------------------------------------------------------- perennial veg */
 
   add('rhubarb', 'Rhubarb', 'perennial', 'svg:rhubarb', {
+    vic: 'Thrives in Victoria — harvest from spring to autumn; it dies back in cold winters in the hills.',
     fam: 'Dock', sun: 'Sun / part shade', water: 'Regular', feed: 'Heavy — loves manure',
     sp: [90, 90], fruitIn: 1, form: 'Crowns', fruitOn: 'Stalks',
     pollination: '—',
@@ -805,6 +860,7 @@
     tips: 'Lasts 10+ years in one spot. Never eat the leaves.'
   });
   add('asparagus', 'Asparagus', 'perennial', 'svg:asparagus', {
+    vic: 'Spears appear September–November in Victoria; cut the ferns down in May–June.',
     fam: 'Asparagus', sun: 'Full sun', water: 'Regular', feed: 'Spring feed',
     sp: [40, 60], fruitIn: 2, form: 'Crowns', fruitOn: 'Spears',
     pollination: '—',
@@ -842,38 +898,67 @@
 
   /* --------------------------------------------------------------- places */
 
-  /* Typical average frost dates (MM-DD). Coastal subtropical places are
-     effectively frost-free; there the dates mark the start and end of the
-     main warm growing season instead. */
+  /* Typical frost dates (MM-DD) for planting purposes. For mild coastal
+     places the "last frost" is when the soil is warm enough for tender crops,
+     and the "first frost" is when summer crops wind down.
+       mild    weeks that cool-season crops keep growing into winter — 0 for
+               cold winters that stop growth, ~12 for Melbourne, 16 frost-free
+       tree    weeks to shift fruit-tree jobs (bud burst) relative to the
+               last frost; negative where frosts linger well after bud burst
+       region  switches on local tips (e.g. VIC) */
   var LOCATIONS = [
-    { id: 'sydney', name: 'Sydney, NSW', lf: '08-25', ff: '06-10', tz: ['Australia/Sydney'] },
-    { id: 'melbourne', name: 'Melbourne, VIC', lf: '09-25', ff: '05-01', tz: ['Australia/Melbourne'] },
-    { id: 'brisbane', name: 'Brisbane, QLD', lf: '07-25', ff: '06-25', tz: ['Australia/Brisbane'] },
-    { id: 'canberra', name: 'Canberra, ACT', lf: '10-25', ff: '04-10', tz: [] },
-    { id: 'adelaide', name: 'Adelaide, SA', lf: '09-01', ff: '05-25', tz: ['Australia/Adelaide'] },
-    { id: 'perth', name: 'Perth, WA', lf: '08-20', ff: '06-10', tz: ['Australia/Perth'] },
-    { id: 'hobart', name: 'Hobart, TAS', lf: '10-15', ff: '04-25', tz: ['Australia/Hobart'] },
-    { id: 'auckland', name: 'Auckland, NZ', lf: '09-01', ff: '06-01', tz: ['Pacific/Auckland'] },
-    { id: 'christchurch', name: 'Christchurch, NZ', lf: '10-20', ff: '04-15', tz: [] },
-    { id: 'johannesburg', name: 'Johannesburg, ZA', lf: '09-10', ff: '05-10', tz: ['Africa/Johannesburg'] },
-    { id: 'london', name: 'London, UK', lf: '04-20', ff: '11-05', tz: ['Europe/London'] },
-    { id: 'manchester', name: 'Manchester, UK', lf: '05-01', ff: '10-25', tz: [] },
-    { id: 'edinburgh', name: 'Edinburgh, UK', lf: '05-10', ff: '10-15', tz: [] },
-    { id: 'dublin', name: 'Dublin, IE', lf: '04-25', ff: '11-01', tz: ['Europe/Dublin'] },
-    { id: 'sofia', name: 'Sofia, BG', lf: '04-20', ff: '10-20', tz: ['Europe/Sofia'] },
-    { id: 'berlin', name: 'Berlin, DE', lf: '05-01', ff: '10-15', tz: ['Europe/Berlin'] },
-    { id: 'amsterdam', name: 'Amsterdam, NL', lf: '04-20', ff: '10-30', tz: ['Europe/Amsterdam', 'Europe/Brussels'] },
-    { id: 'paris', name: 'Paris, FR', lf: '04-15', ff: '11-01', tz: ['Europe/Paris'] },
-    { id: 'madrid', name: 'Madrid, ES', lf: '03-25', ff: '11-20', tz: ['Europe/Madrid'] },
-    { id: 'rome', name: 'Rome, IT', lf: '03-15', ff: '11-25', tz: ['Europe/Rome', 'Europe/Athens'] },
-    { id: 'stockholm', name: 'Stockholm, SE', lf: '05-15', ff: '10-01', tz: ['Europe/Stockholm', 'Europe/Oslo', 'Europe/Helsinki'] },
-    { id: 'newyork', name: 'New York, US', lf: '04-10', ff: '11-05', tz: ['America/New_York'] },
-    { id: 'chicago', name: 'Chicago, US', lf: '04-25', ff: '10-20', tz: ['America/Chicago'] },
-    { id: 'denver', name: 'Denver, US', lf: '05-05', ff: '10-05', tz: ['America/Denver'] },
-    { id: 'seattle', name: 'Seattle, US', lf: '03-25', ff: '11-10', tz: [] },
-    { id: 'losangeles', name: 'Los Angeles, US', lf: '02-15', ff: '12-15', tz: ['America/Los_Angeles'] },
-    { id: 'toronto', name: 'Toronto, CA', lf: '05-09', ff: '10-10', tz: ['America/Toronto'] },
-    { id: 'vancouver', name: 'Vancouver, CA', lf: '04-01', ff: '11-01', tz: ['America/Vancouver'] }
+    { id: 'melbourne', group: 'Victoria', name: 'Melbourne (inner & bayside)', lf: '10-10', ff: '05-10', mild: 12, region: 'VIC', tz: ['Australia/Melbourne'] },
+    { id: 'melb-outer', group: 'Victoria', name: 'Melbourne outer east & Yarra Valley', lf: '10-25', ff: '04-25', mild: 8, tree: -2, region: 'VIC', tz: [] },
+    { id: 'mornington', group: 'Victoria', name: 'Mornington Peninsula', lf: '09-30', ff: '05-25', mild: 14, region: 'VIC', tz: [] },
+    { id: 'geelong', group: 'Victoria', name: 'Geelong & Bellarine', lf: '10-05', ff: '05-15', mild: 12, region: 'VIC', tz: [] },
+    { id: 'warrnambool', group: 'Victoria', name: 'Warrnambool & south-west coast', lf: '10-05', ff: '05-30', mild: 14, region: 'VIC', tz: [] },
+    { id: 'gippsland', group: 'Victoria', name: 'Gippsland (Traralgon, Sale)', lf: '10-20', ff: '04-30', mild: 8, tree: -1, region: 'VIC', tz: [] },
+    { id: 'ballarat', group: 'Victoria', name: 'Ballarat & Central Highlands', lf: '11-10', ff: '04-10', mild: 4, tree: -4, region: 'VIC', tz: [] },
+    { id: 'macedon', group: 'Victoria', name: 'Macedon Ranges & Daylesford', lf: '11-15', ff: '04-05', mild: 2, tree: -5, region: 'VIC', tz: [] },
+    { id: 'bendigo', group: 'Victoria', name: 'Bendigo & Castlemaine', lf: '10-20', ff: '04-25', mild: 6, tree: -2, region: 'VIC', tz: [] },
+    { id: 'horsham', group: 'Victoria', name: 'Wimmera (Horsham)', lf: '10-15', ff: '04-30', mild: 6, tree: -1, region: 'VIC', tz: [] },
+    { id: 'shepparton', group: 'Victoria', name: 'Goulburn Valley (Shepparton)', lf: '10-15', ff: '04-25', mild: 6, tree: -1, region: 'VIC', tz: [] },
+    { id: 'wodonga', group: 'Victoria', name: 'North-east (Wangaratta, Wodonga)', lf: '10-20', ff: '04-20', mild: 4, tree: -2, region: 'VIC', tz: [] },
+    { id: 'mildura', group: 'Victoria', name: 'Mildura & Sunraysia', lf: '09-20', ff: '05-10', mild: 10, region: 'VIC', tz: [] },
+    { id: 'bright', group: 'Victoria', name: 'Bright & the High Country', lf: '11-20', ff: '03-30', mild: 0, tree: -5, region: 'VIC', tz: [] },
+
+    { id: 'sydney', group: 'Southern hemisphere', name: 'Sydney, NSW', lf: '08-25', ff: '06-10', mild: 14, tz: ['Australia/Sydney'] },
+    { id: 'brisbane', group: 'Southern hemisphere', name: 'Brisbane, QLD', lf: '07-25', ff: '06-25', mild: 16, tz: ['Australia/Brisbane'] },
+    { id: 'canberra', group: 'Southern hemisphere', name: 'Canberra, ACT', lf: '10-25', ff: '04-10', mild: 0, tree: -4, tz: [] },
+    { id: 'adelaide', group: 'Southern hemisphere', name: 'Adelaide, SA', lf: '09-01', ff: '05-25', mild: 12, tz: ['Australia/Adelaide'] },
+    { id: 'perth', group: 'Southern hemisphere', name: 'Perth, WA', lf: '08-20', ff: '06-10', mild: 14, tz: ['Australia/Perth'] },
+    { id: 'hobart', group: 'Southern hemisphere', name: 'Hobart, TAS', lf: '10-15', ff: '04-25', mild: 6, tree: -2, tz: ['Australia/Hobart'] },
+    { id: 'auckland', group: 'Southern hemisphere', name: 'Auckland, NZ', lf: '09-01', ff: '06-01', mild: 14, tz: ['Pacific/Auckland'] },
+    { id: 'christchurch', group: 'Southern hemisphere', name: 'Christchurch, NZ', lf: '10-20', ff: '04-15', mild: 4, tree: -2, tz: [] },
+    { id: 'johannesburg', group: 'Southern hemisphere', name: 'Johannesburg, ZA', lf: '09-10', ff: '05-10', mild: 8, tz: ['Africa/Johannesburg'] },
+
+    { id: 'london', group: 'Northern hemisphere', name: 'London, UK', lf: '04-20', ff: '11-05', mild: 4, tz: ['Europe/London'] },
+    { id: 'manchester', group: 'Northern hemisphere', name: 'Manchester, UK', lf: '05-01', ff: '10-25', mild: 4, tz: [] },
+    { id: 'edinburgh', group: 'Northern hemisphere', name: 'Edinburgh, UK', lf: '05-10', ff: '10-15', mild: 2, tz: [] },
+    { id: 'dublin', group: 'Northern hemisphere', name: 'Dublin, IE', lf: '04-25', ff: '11-01', mild: 4, tz: ['Europe/Dublin'] },
+    { id: 'sofia', group: 'Northern hemisphere', name: 'Sofia, BG', lf: '04-20', ff: '10-20', mild: 0, tz: ['Europe/Sofia'] },
+    { id: 'berlin', group: 'Northern hemisphere', name: 'Berlin, DE', lf: '05-01', ff: '10-15', mild: 0, tz: ['Europe/Berlin'] },
+    { id: 'amsterdam', group: 'Northern hemisphere', name: 'Amsterdam, NL', lf: '04-20', ff: '10-30', mild: 2, tz: ['Europe/Amsterdam', 'Europe/Brussels'] },
+    { id: 'paris', group: 'Northern hemisphere', name: 'Paris, FR', lf: '04-15', ff: '11-01', mild: 2, tz: ['Europe/Paris'] },
+    { id: 'madrid', group: 'Northern hemisphere', name: 'Madrid, ES', lf: '03-25', ff: '11-20', mild: 4, tz: ['Europe/Madrid'] },
+    { id: 'rome', group: 'Northern hemisphere', name: 'Rome, IT', lf: '03-15', ff: '11-25', mild: 8, tz: ['Europe/Rome', 'Europe/Athens'] },
+    { id: 'stockholm', group: 'Northern hemisphere', name: 'Stockholm, SE', lf: '05-15', ff: '10-01', mild: 0, tz: ['Europe/Stockholm', 'Europe/Oslo', 'Europe/Helsinki'] },
+    { id: 'newyork', group: 'Northern hemisphere', name: 'New York, US', lf: '04-10', ff: '11-05', mild: 0, tz: ['America/New_York'] },
+    { id: 'chicago', group: 'Northern hemisphere', name: 'Chicago, US', lf: '04-25', ff: '10-20', mild: 0, tz: ['America/Chicago'] },
+    { id: 'denver', group: 'Northern hemisphere', name: 'Denver, US', lf: '05-05', ff: '10-05', mild: 0, tz: ['America/Denver'] },
+    { id: 'seattle', group: 'Northern hemisphere', name: 'Seattle, US', lf: '03-25', ff: '11-10', mild: 6, tz: [] },
+    { id: 'losangeles', group: 'Northern hemisphere', name: 'Los Angeles, US', lf: '02-15', ff: '12-15', mild: 14, tz: ['America/Los_Angeles'] },
+    { id: 'toronto', group: 'Northern hemisphere', name: 'Toronto, CA', lf: '05-09', ff: '10-10', mild: 0, tz: ['America/Toronto'] },
+    { id: 'vancouver', group: 'Northern hemisphere', name: 'Vancouver, CA', lf: '04-01', ff: '11-01', mild: 6, tz: ['America/Vancouver'] }
+  ];
+
+  /* How mild the winter is — offered when you set your own frost dates. */
+  var WINTERS = [
+    [0, 'Cold — the ground freezes'],
+    [4, 'Frosty — hard frosts (Ballarat)'],
+    [8, 'Cool — regular light frosts'],
+    [12, 'Mild — light frosts (Melbourne)'],
+    [16, 'Frost-free']
   ];
 
   var CATS = [
@@ -912,5 +997,5 @@
     ['Never overdo it', 'Remove no more than a quarter of a tree in one year. Over-pruning gives a forest of water shoots and no fruit.']
   ];
 
-  window.GP_DATA = { plants: PLANTS, svg: SVG, locations: LOCATIONS, cats: CATS, kinds: KINDS, pruning: PRUNING_BASICS };
+  window.GP_DATA = { plants: PLANTS, svg: SVG, locations: LOCATIONS, winters: WINTERS, cats: CATS, kinds: KINDS, pruning: PRUNING_BASICS };
 })();

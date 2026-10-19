@@ -8,7 +8,7 @@
 
   /* Must match the ?v= stamp and window.GP_BUILD in index.html. Bump both
      together when any of styles.css, data.js or app.js changes. */
-  const BUILD = '2026-10-19';
+  const BUILD = '2026-10-19-3';
   const KEY = 'garden-planner-v1';
 
   const D = window.GP_DATA;
@@ -42,6 +42,7 @@
 
   function migrate(s) {
     s = s || {};
+    const preset = D.locations.find((l) => l.id === s.loc) || {};
     const beds = (Array.isArray(s.beds) ? s.beds : []).map((b) => Object.assign({}, b, {
       rows: (Array.isArray(b.rows) ? b.rows : []).filter((r) => PL[r.p])
     }));
@@ -51,6 +52,9 @@
       loc: s.loc || null,
       lf: s.lf || '04-20',            // last spring frost, MM-DD
       ff: s.ff || '11-05',            // first autumn frost, MM-DD
+      mild: s.mild != null ? s.mild : (preset.mild || 0),       // weeks cool crops grow on into winter
+      tree: s.tree != null ? s.tree : (preset.tree || 0),       // fruit-tree shift vs last frost, weeks
+      region: s.region != null ? s.region : (preset.region || ''),
       beds: beds,                     // {id, name, kind, w, l, rows:[{id, p, m, d, n, v}]}
       trees: (Array.isArray(s.trees) ? s.trees : []).filter((t) => PL[t.p]), // {id, p, v, y, note}
       done: s.done || {},             // task key -> ISO date ticked
@@ -176,21 +180,50 @@
 
   const dirExtra = (p) => (p.ind ? Math.round(p.ind * 7 * 0.6) : 0);
 
+  /* In mild winters cool-season crops keep growing, so their autumn
+     windows open later and run on into winter. Tender crops never do. */
+  function mildW(p) {
+    if (!S.mild || p.frost === 't') return 0;
+    return Math.min(S.mild, p.mw == null ? S.mild : p.mw);
+  }
+
+  /* Date a planting reaches `need` growing days. Growth slows to a crawl
+     between the first and last frost — less so where winters are mild. */
+  function grown(start, need) {
+    const r = 0.25 + 0.04 * Math.min(16, S.mild || 0), s0 = seasonOf(start), fr = [];
+    for (let i = s0 - 2; i <= s0 + 3; i++) fr.push([FF(i), LF(i + 1)]);
+    let d = start, left = need;
+    for (let k = 0; k < 12; k++) {
+      const inF = fr.find((x) => d >= x[0] && d < x[1]);
+      if (inF) {
+        const cap = days(d, inF[1]) * r;
+        if (left <= cap) return addD(d, Math.ceil(left / r));
+        left -= cap; d = inF[1];
+      } else {
+        const nx = fr.find((x) => x[0] > d);
+        if (!nx || left <= days(d, nx[0])) return addD(d, Math.ceil(left));
+        left -= days(d, nx[0]); d = nx[0];
+      }
+    }
+    return addD(d, Math.ceil(left));
+  }
+
   /* Latest sensible planting date so a crop still has time to crop before
      frost (tender) or shortly after it (half-hardy). Hardy crops: no cap. */
   function capFor(p, ff, kind) {
     const grow = p.dtm + (kind === 'dir' ? dirExtra(p) : 0);
     if (p.frost === 't') return addD(ff, -(grow + 14));
-    if (p.frost === 'h') return addD(ff, 21 - grow);
+    if (p.frost === 'h') return addD(ff, 21 - grow + mildW(p) * 7);
     return null;
   }
 
   /* Planting windows for one season: {k: 'out'|'dir', a, b, fall}. */
   function wins(p, s) {
     const lf = LF(s), ff = FF(s), out = [];
+    const m = mildW(p);
     function push(k, base, w, fall) {
-      const a = addD(base, w[0] * 7);
-      let b = addD(base, w[1] * 7);
+      const a = addD(base, (w[0] + (fall ? Math.round(m / 4) : 0)) * 7);
+      let b = addD(base, (w[1] + (fall ? m : 0)) * 7);
       const cap = capFor(p, ff, k);
       if (cap && b > cap) b = cap;
       if (b >= a) out.push({ k: k, a: a, b: b, fall: !!fall });
@@ -285,11 +318,11 @@
     const p = PL[row.p], st = pd(row.d);
     const r = { p: p, start: st, m: row.m };
     if (row.m === 'indoor' && p.ind) r.sow = addD(st, -p.ind * 7);
-    r.ha = addD(st, p.dtm + (row.m === 'direct' ? dirExtra(p) : 0));
+    r.ha = grown(st, p.dtm + (row.m === 'direct' ? dirExtra(p) : 0));
     r.hb = addD(r.ha, p.hw * 7);
-    const ff = nextFF(st);
+    const ff = nextFF(st), hc = addD(ff, 28 + mildW(p) * 7);
     if (p.frost === 't' && r.hb > ff) r.hb = ff;
-    if (p.frost === 'h' && r.hb > addD(ff, 28)) r.hb = addD(ff, 28);
+    if (p.frost === 'h' && r.hb > hc) r.hb = hc;
     if (r.hb < addD(r.ha, 7)) r.hb = addD(r.ha, 7);
     r.from = r.sow || st;
     r.end = r.hb;
@@ -301,7 +334,7 @@
   function treeWins(p, from, to) {
     const out = [];
     for (let s = seasonOf(from) - 1; s <= seasonOf(to) + 1; s++) {
-      const lf = LF(s);
+      const lf = addD(LF(s), (S.tree || 0) * 7);
       p.tasks.forEach((t, i) => {
         const a = addD(lf, t[1][0] * 7), b = addD(lf, t[1][1] * 7);
         if (b >= from && a <= to) out.push({ i: i, s: s, t: t, a: a, b: b });
@@ -341,7 +374,7 @@
       if (p.frost !== 'H') T('harden', addD(r.start, -7), 'Harden off ' + n + ' seedlings');
       T('plant', r.start, 'Plant out ' + n);
     } else if (row.m === 'direct') {
-      T('sow', r.start, 'Sow ' + n + ' direct');
+      T('sow', r.start, p.sowAs || 'Sow ' + n + ' direct');
     } else {
       T('plant', r.start, 'Plant ' + n + ' seedlings');
     }
@@ -445,9 +478,9 @@
   /* ------------------------------------------------------------ welcome */
 
   function locOptions(sel) {
-    const groups = [['Southern hemisphere', (l) => mmdd(l.lf)[0] >= 6], ['Northern hemisphere', (l) => mmdd(l.lf)[0] < 6]];
-    return groups.map((g) => '<optgroup label="' + g[0] + '">' +
-      D.locations.filter(g[1]).map((l) => '<option value="' + l.id + '"' + (l.id === sel ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') +
+    const groups = D.locations.map((l) => l.group).filter((g, i, a) => a.indexOf(g) === i);
+    return groups.map((g) => '<optgroup label="' + g + '">' +
+      D.locations.filter((l) => l.group === g).map((l) => '<option value="' + l.id + '"' + (l.id === sel ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') +
       '</optgroup>').join('') + '<option value="custom"' + (sel === 'custom' ? ' selected' : '') + '>Somewhere else — set my own frost dates</option>';
   }
 
@@ -480,7 +513,7 @@
   function setLoc(id) {
     const l = D.locations.find((x) => x.id === id);
     S.loc = id;
-    if (l) { S.lf = l.lf; S.ff = l.ff; }
+    if (l) { S.lf = l.lf; S.ff = l.ff; S.mild = l.mild || 0; S.tree = l.tree || 0; S.region = l.region || ''; }
   }
 
   function exampleGarden() {
@@ -515,12 +548,15 @@
       const lf = LF(i);
       if (lf <= t) { lfPrev = lf; sPrev = i; } else if (!lfNext) lfNext = lf;
     }
+    const mild = S.mild >= 10;
     if (lfPrev && t < FF(sPrev)) {
       const w = Math.floor(days(lfPrev, t) / 7), ff = FF(sPrev), left = Math.ceil(days(t, ff) / 7);
+      if (mild) return 'Warm season · summer crops in the ground · cooling off ~' + fmt(ff) + (left <= 8 ? ' (' + left + ' wk' + (left === 1 ? '' : 's') + ')' : '');
       return 'Growing season · ' + (w < 1 ? 'last frost just passed' : w + ' week' + (w === 1 ? '' : 's') + ' since last frost') +
         ' · first frost ~' + fmt(ff) + (left <= 8 ? ' (' + left + ' wk' + (left === 1 ? '' : 's') + ')' : '');
     }
     const n = Math.ceil(days(t, lfNext) / 7);
+    if (mild) return 'Cool season · winter crops growing · summer planting from ~' + fmt(lfNext) + ' — ' + n + ' week' + (n === 1 ? '' : 's') + ' to go';
     return 'Frost season · last frost expected ~' + fmt(lfNext) + ' — ' + n + ' week' + (n === 1 ? '' : 's') + ' to go';
   }
 
@@ -697,7 +733,7 @@
   function viewSeason() {
     const s = UI.season, a = seasonStart(s), b = seasonEnd(s), total = 12 * MW, span = days(a, addD(b, 1));
     const X = (d) => Math.max(0, Math.min(total, days(a, d) / span * total));
-    let html = seasonSwitch() + '<div class="legend"><span><i class="k-b"></i>Propagating</span><span><i class="k-y"></i>Growing</span><span><i class="k-g"></i>Harvest</span><span><i class="k-f"></i>Frost</span></div>';
+    let html = seasonSwitch() + '<div class="legend"><span><i class="k-b"></i>Propagating</span><span><i class="k-y"></i>Growing</span><span><i class="k-g"></i>Harvest</span><span><i class="k-f"></i>' + (S.mild >= 10 ? 'Cool season' : 'Frost') + '</span></div>';
 
     const groups = [];
     S.beds.forEach((bed) => {
@@ -891,11 +927,11 @@
       rows.push(['Plant / sow', 'y', ws.map((w) => [w.a, w.b])]);
       rows.push(['Harvest', 'g', ws.map((w) => {
         const g = p.dtm + (w.k === 'dir' ? dirExtra(p) : 0);
-        let hb = addD(w.b, g + p.hw * 7);
-        const ff = nextFF(w.a);
+        let hb = addD(grown(w.b, g), p.hw * 7);
+        const ff = nextFF(w.a), hc = addD(ff, 28 + mildW(p) * 7);
         if (p.frost === 't' && hb > ff) hb = ff;
-        if (p.frost === 'h' && hb > addD(ff, 28)) hb = addD(ff, 28);
-        return [addD(w.a, g), hb];
+        if (p.frost === 'h' && hb > hc) hb = hc;
+        return [grown(w.a, g), hb];
       })]);
     } else {
       const ws = treeWins(p, a, b);
@@ -919,6 +955,7 @@
     let html = '<div class="pd-head">' + av(p, 'xl') + '<div><small>' + esc(kicker) + '</small><h2>' + esc(p.name) + '</h2></div>' +
       '<button class="fav-btn' + (S.favs[p.id] ? ' on' : '') + '" type="button" data-act="fav" data-id="' + p.id + '" aria-pressed="' + !!S.favs[p.id] + '" aria-label="Save">' + (S.favs[p.id] ? '♥' : '♡') + '</button></div>';
 
+    if (p.needs && S.mild < p.needs[0]) html += '<div class="perfect bad"><b>Check your climate</b><p>' + esc(p.needs[1]) + '</p></div>';
     html += '<h3 class="h3">Season overview <small>' + esc(locName()) + ' · ' + t.getFullYear() + '</small></h3>' + overviewChart(p);
 
     html += '<div class="tiles">' + [['neighbours', '💚', 'Neighbours'], ['distances', '📏', 'Distances'], ['pests', '🐛', 'Diseases & Pests']].map((x) =>
@@ -932,6 +969,7 @@
     if (isTree(p)) html += treeGuide(p);
     if (isCrop(p) && !isTree(p)) html += cropInstructions(p);
     if (p.tips) html += '<div class="tip">💡 ' + esc(p.tips) + '</div>';
+    if (S.region === 'VIC' && p.vic) html += '<div class="tip local">📍 <b>In Victoria:</b> ' + esc(p.vic) + '</div>';
 
     html += '<div class="sheet-actions">';
     if (isCrop(p)) html += '<button class="btn primary" type="button" data-act="plant-to-bed" data-id="' + p.id + '">' + (sh.bedId ? 'Add to ' + esc(bedById(sh.bedId).name) : '+ Add to a bed') + '</button>';
@@ -1146,15 +1184,21 @@
     const y = today().getFullYear(), lfD = LF(y), ffD = FF(y), len = Math.round(days(lfD, ffD) / 7);
     return '<h2>Settings</h2>' +
       '<label class="field"><span>Location</span><select data-field="set-loc">' + locOptions(S.loc) + '</select></label>' +
-      '<div class="row2"><label class="field"><span>Last spring frost</span><input type="date" data-field="set-lf" value="' + iso(lfD) + '" /></label>' +
-      '<label class="field"><span>First autumn frost</span><input type="date" data-field="set-ff" value="' + iso(ffD) + '" /></label></div>' +
+      '<div class="row2"><label class="field"><span>' + (S.mild >= 10 ? 'Safe to plant summer crops' : 'Last spring frost') + '</span><input type="date" data-field="set-lf" value="' + iso(lfD) + '" /></label>' +
+      '<label class="field"><span>' + (S.mild >= 10 ? 'Summer crops wind down' : 'First autumn frost') + '</span><input type="date" data-field="set-ff" value="' + iso(ffD) + '" /></label></div>' +
+      '<label class="field"><span>Winters</span><select data-field="set-mild">' + D.winters.map((w) =>
+        '<option value="' + w[0] + '"' + (nearestWinter() === w[0] ? ' selected' : '') + '>' + w[1] + '</option>').join('') + '</select></label>' +
       '<p class="hint">Growing season of about ' + len + ' weeks. These two dates drive every date in the app — adjust them if your garden is colder or warmer than the city average. ' +
-      'Frost-free? Use the start and end of your main warm growing season.</p>' +
+      'Frost-free? Use the start and end of your main warm growing season. Milder winters let peas, broad beans, garlic, onions and brassicas be sown later into autumn and winter.</p>' +
       '<h3 class="h3">Backup</h3><p class="hint">Your garden is stored only in this browser. Save a backup file to move it to another device.</p>' +
       '<div class="row2"><button class="btn ghost" type="button" data-act="export">⬇︎ Save backup</button><label class="btn ghost file">⬆︎ Restore<input type="file" accept="application/json,.json" data-field="import" hidden /></label></div>' +
       (storageBlocked ? '<p class="bad">This browser is blocking storage, so changes will be lost when you close the page.</p>' : '') +
       '<div class="sheet-links"><button type="button" class="link danger" data-act="reset">Erase everything and start over</button></div>' +
       '<p class="fine">Garden Planner · build ' + BUILD + ' · <a href="../../">← Back to home</a></p>';
+  }
+
+  function nearestWinter() {
+    return D.winters.reduce((best, w) => (Math.abs(w[0] - S.mild) < Math.abs(best - S.mild) ? w[0] : best), D.winters[0][0]);
   }
 
   const SHEETS = { plant: sheetPlant, row: sheetRow, bed: sheetBed, pick: sheetPick, pickTree: sheetPickTree, tree: sheetTree, task: sheetTask, settings: sheetSettings };
@@ -1375,7 +1419,8 @@
       return climateChanged();
     },
     'set-lf': (v) => { if (v) { S.lf = v.slice(5); S.loc = 'custom'; return climateChanged(); } },
-    'set-ff': (v) => { if (v) { S.ff = v.slice(5); S.loc = 'custom'; return climateChanged(); } }
+    'set-ff': (v) => { if (v) { S.ff = v.slice(5); S.loc = 'custom'; return climateChanged(); } },
+    'set-mild': (v) => { S.mild = +v; return climateChanged(); }
   };
   const treeOf = () => S.trees.find((x) => x.id === UI.sheet.id);
   /* Frost dates move where seasons start, so re-anchor the season views. */
