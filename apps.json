@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "Novated Lease Calculator",
+      "description": "Enter your salary and car price to see what a novated lease really costs your take-home pay, the tax and GST you save, and how the EV fringe benefits tax exemption and its 2027 changes affect you.",
+      "path": "apps/novated-lease-calculator/",
+      "tags": ["finance", "car", "novated lease", "salary packaging", "tax", "ev", "electric vehicle", "fbt", "calculator", "australia"],
+      "emoji": "🚗"
+    },
+    {
       "title": "Garden Planner",
       "description": "Your one-stop veg and fruit garden planner: design beds row by row with companion checks, get sowing, planting and harvest dates for your location, and keep a pruning and care calendar for every fruit tree.",
       "path": "apps/garden-planner/",
