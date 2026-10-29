@@ -250,6 +250,50 @@ body.onboarding { padding-bottom: 24px; }
 .dots i { width: 6px; height: 6px; border-radius: 50%; }
 .dots i.done { opacity: 0.35; }
 
+/* ------------------------------------------------------------- weather & watering */
+
+.wx { margin-top: 14px; padding: 14px 14px 10px; }
+.wx-msg { margin: 4px 2px; font-size: 0.9rem; }
+.wx-now { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
+.wx-ico { font-size: 2.2rem; line-height: 1; }
+.wx-t b { display: block; font-size: 1.35rem; line-height: 1.1; }
+.wx-t b small { font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+.wx-t > small { display: block; color: var(--muted); font-size: 0.8rem; }
+.wx-sum { text-align: center; background: #eef3fb; border-radius: 12px; padding: 6px 8px; min-width: 64px; }
+.wx-sum small { display: block; font-size: 0.66rem; color: #5a6d93; font-weight: 700; white-space: nowrap; }
+.wx-sum b { font-size: 0.95rem; color: #2d4a7a; }
+.wx-strip { display: flex; gap: 2px; overflow-x: auto; margin: 12px -6px 0; padding: 0 6px 4px; scrollbar-width: none; }
+.wx-strip::-webkit-scrollbar { display: none; }
+.wx-d { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 12px; }
+.wx-d small { font-size: 0.68rem; font-weight: 700; color: var(--muted); }
+.wx-d span { font-size: 1.15rem; line-height: 1.2; }
+.wx-d b { font-size: 0.78rem; }
+.wx-d .bar { display: flex; align-items: flex-end; height: 34px; width: 10px; background: #eef1f6; border-radius: 5px; overflow: hidden; }
+.wx-d .bar i { display: block; width: 100%; background: var(--blue); border-radius: 5px; }
+.wx-d em { font-style: normal; font-size: 0.68rem; color: #4060a8; font-weight: 700; }
+.wx-d.past { opacity: 0.55; }
+.wx-d.now { background: #eaf3ea; opacity: 1; }
+.wx-alerts { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.wx-alerts p { margin: 0; background: #fff4e5; border-radius: 12px; padding: 8px 12px; font-size: 0.85rem; color: #5a4316; }
+.wx-src { margin: 8px 2px 0; font-size: 0.7rem; color: var(--muted); text-align: right; }
+
+.task.water { padding: 8px 10px 8px 12px; gap: 10px; }
+.task.water .tk-txt { flex: 1; }
+.task.water .tk-txt small b { font-weight: 800; }
+.w-now { color: #2f5fb5; }
+.w-rain { color: #4f6f9e; }
+.w-ok { color: var(--green-2); }
+.wbtn { flex: none; border: 0; border-radius: 999px; padding: 8px 12px; font-weight: 800; font-size: 0.8rem; background: #e8eefb; color: #2d4a7a; min-height: 36px; }
+.task.water.now .wbtn { background: #2f5fb5; color: #fff; }
+.task.water.done .wbtn { background: none; color: var(--muted); }
+.wchip { display: inline-block; margin-left: 6px; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; vertical-align: 1px; white-space: nowrap; }
+.wchip.now { background: #2f5fb5; color: #fff; }
+.wchip.rain { background: #e8eefb; color: #2d4a7a; }
+.wchip.ok { background: rgba(255, 255, 255, 0.7); color: var(--green-2); }
+.pot .wchip { margin: 0; }
+.switch { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 8px 2px; min-height: 44px; }
+.switch input { width: 22px; height: 22px; accent-color: var(--green); }
+
 /* ------------------------------------------------------------- garden */
 
 .season-sw { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 10px 0 4px; }
