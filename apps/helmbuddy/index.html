@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HelmBuddy — Wind & Jib Advisor</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1.9.4">
+<script src="vendor/leaflet/leaflet.js?v=1.9.4"></script>
+
+<!-- Type: Bricolage Grotesque (display) + Archivo (data/UI) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   HelmBuddy design tokens
+   sky:      #E9F4FB  (chrome / haze)
+   ocean:    #0E6BA8  (primary action)
+   navy:     #0B2E4F  (ink)
+   teal:     #14A098  (fair-wind accent)
+   amber:    #E8A13C  (working-wind accent)
+   coral:    #E1584B  (heavy-wind warning)
+   canvas:   #FFFFFF  (cards / sailcloth)
+   ============================================================ */
+:root{
+  --sky:#E9F4FB;
+  --ocean:#0E6BA8;
+  --ocean-deep:#0A5285;
+  --navy:#0B2E4F;
+  --navy-60:rgba(11,46,79,.6);
+  --teal:#14A098;
+  --amber:#E8A13C;
+  --coral:#E1584B;
+  --canvas:#FFFFFF;
+  --hairline:rgba(11,46,79,.12);
+  --shadow:0 10px 30px rgba(11,46,79,.16);
+  --radius:18px;
+  --panel-w:376px;
+  --font-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-ui:"Archivo", "Helvetica Neue", system-ui, sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-ui);
+  color:var(--navy);
+  background:var(--sky);
+}
+
+/* ---------- Map layer ---------- */
+#map{position:absolute;inset:0;z-index:1;background:#BFDCEE}
+#windCanvas{
+  position:absolute;inset:0;z-index:400;
+  pointer-events:none;
+}
+.leaflet-container{font-family:var(--font-ui)}
+
+/* ---------- Top bar: brand + search ---------- */
+#topbar{
+  position:absolute;top:16px;left:16px;right:calc(var(--panel-w) + 32px);
+  z-index:1000;display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;
+}
+#brand{
+  display:flex;align-items:center;gap:10px;
+  background:var(--canvas);border-radius:var(--radius);
+  padding:10px 18px 10px 12px;box-shadow:var(--shadow);
+  user-select:none;
+}
+#brand svg{width:34px;height:34px;flex:none}
+#brand .name{
+  font-family:var(--font-display);font-weight:800;font-size:20px;
+  letter-spacing:-.02em;line-height:1;
+}
+#brand .name em{font-style:normal;color:var(--ocean)}
+#brand .tag{font-size:10.5px;color:var(--navy-60);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+#brand .home{display:inline-block;font-size:11px;font-weight:600;color:var(--ocean);text-decoration:none;margin-top:3px}
+#brand .home:hover{text-decoration:underline}
+
+#searchWrap{
+  flex:1;min-width:220px;max-width:460px;position:relative;
+}
+#searchBox{
+  width:100%;height:100%;min-height:54px;
+  border:none;border-radius:var(--radius);
+  background:var(--canvas);box-shadow:var(--shadow);
+  padding:0 52px 0 48px;
+  font:500 16px var(--font-ui);color:var(--navy);
+  outline:3px solid transparent;outline-offset:0;
+  transition:outline-color .15s;
+}
+#searchBox:focus{outline-color:rgba(14,107,168,.45)}
+#searchBox::placeholder{color:var(--navy-60)}
+#searchIcon{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;color:var(--ocean);pointer-events:none;
+}
+#searchGo{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border:none;border-radius:12px;
+  background:var(--ocean);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+#searchGo:hover{background:var(--ocean-deep)}
+#searchStatus{
+  position:absolute;left:0;right:0;top:calc(100% + 8px);
+  background:var(--canvas);border-radius:12px;box-shadow:var(--shadow);
+  padding:10px 16px;font-size:14px;color:var(--navy-60);display:none;
+}
+
+/* ---------- Side panel ---------- */
+#panel{
+  position:absolute;top:16px;right:16px;bottom:16px;width:var(--panel-w);
+  z-index:1000;display:flex;flex-direction:column;gap:12px;
+  overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:none;
+}
+#panel::-webkit-scrollbar{display:none}
+.card{
+  background:var(--canvas);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px;flex:none;
+}
+
+/* Boat profile */
+#boatCard{display:flex;flex-direction:column;gap:10px}
+.card-label{
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--navy-60);
+}
+#boatChips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  border:1.5px solid var(--hairline);background:#F4FAFE;
+  border-radius:999px;padding:9px 16px;
+  font:600 13.5px var(--font-ui);color:var(--navy);
+  cursor:pointer;transition:all .15s;min-height:40px;
+}
+.chip.active{background:var(--navy);border-color:var(--navy);color:#fff}
+#boatMeta{font-size:12.5px;color:var(--navy-60);line-height:1.5}
+
+/* Wind readout — the signature dial */
+#windCard{padding:20px 18px}
+#windTop{display:flex;align-items:center;gap:18px}
+#dialWrap{position:relative;width:132px;height:132px;flex:none}
+#dial{width:100%;height:100%}
+#dialArrow{transform-origin:70px 70px;transition:transform .9s cubic-bezier(.34,1.3,.5,1)}
+#windNums{flex:1;min-width:0}
+#windSpeed{
+  font-family:var(--font-display);font-weight:800;font-size:56px;
+  line-height:.95;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+}
+#windSpeed small{font-size:18px;font-weight:700;color:var(--navy-60);letter-spacing:0;margin-left:4px}
+#windDirTxt{font:600 15px var(--font-ui);margin-top:6px}
+#windGust{font-size:13px;color:var(--navy-60);margin-top:3px;font-variant-numeric:tabular-nums}
+#windWhere{
+  margin-top:14px;padding-top:12px;border-top:1px dashed var(--hairline);
+  font-size:12.5px;color:var(--navy-60);display:flex;gap:8px;align-items:center;
+  overflow:hidden;
+}
+#windWhere .pin-dot{width:8px;height:8px;border-radius:50%;background:var(--coral);flex:none}
+#windWhere span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dataSrc{font-size:11px;color:var(--navy-60);margin-top:6px}
+#dataSrc.live b{color:var(--teal)}
+#dataSrc.sim b{color:var(--amber)}
+
+/* Jib recommendation */
+#jibCard{border-top:6px solid var(--band-color,var(--teal))}
+#jibHead{display:flex;align-items:center;gap:14px}
+#jibBadge{
+  width:74px;height:84px;flex:none;position:relative;
+}
+#jibBadge svg{width:100%;height:100%;display:block}
+#jibBadge .num{
+  position:absolute;left:0;right:14px;top:26px;text-align:center;
+  font-family:var(--font-display);font-weight:800;font-size:34px;color:#fff;
+  letter-spacing:-.02em;
+}
+#jibTitle{font-family:var(--font-display);font-weight:700;font-size:21px;letter-spacing:-.01em;line-height:1.1}
+#jibSub{font-size:13px;color:var(--navy-60);margin-top:5px;line-height:1.45}
+#bandStrip{
+  display:flex;gap:4px;margin-top:14px;height:8px;border-radius:99px;overflow:hidden;
+}
+.band-seg{flex:1;background:#E4EEF5;position:relative}
+.band-seg.on{background:var(--band-color,var(--teal))}
+#bandLabels{display:flex;gap:4px;margin-top:5px}
+#bandLabels div{flex:1;font-size:10px;text-align:center;color:var(--navy-60);letter-spacing:.04em}
+
+/* Rig tune rows */
+#rigRows{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.rig-row{display:flex;gap:12px;align-items:flex-start}
+.rig-icon{
+  width:34px;height:34px;border-radius:10px;flex:none;
+  background:#EAF3FA;color:var(--ocean);
+  display:flex;align-items:center;justify-content:center;
+}
+.rig-row b{font-size:13.5px;display:block}
+.rig-row p{font-size:12.5px;color:var(--navy-60);line-height:1.45;margin-top:1px}
+.rig-meter{display:inline-flex;gap:3px;margin-left:8px;vertical-align:1px}
+.rig-meter i{width:14px;height:5px;border-radius:3px;background:#E4EEF5}
+.rig-meter i.f{background:var(--band-color,var(--teal))}
+
+/* Safety note */
+#noteCard{background:#FFF9EF;border:1px solid rgba(232,161,60,.35);box-shadow:none;padding:14px 16px;display:flex;gap:10px}
+#noteCard.calm{background:#EFFAF6;border-color:rgba(20,160,152,.3)}
+#noteCard.danger{background:#FDF1EF;border-color:rgba(225,88,75,.4)}
+#noteCard p{font-size:13px;line-height:1.5}
+#noteCard b{display:block;font-size:13px;margin-bottom:2px}
+
+/* Refresh */
+#refreshBtn{
+  border:none;border-radius:var(--radius);min-height:52px;
+  background:var(--ocean);color:#fff;font:700 15px var(--font-ui);
+  cursor:pointer;box-shadow:var(--shadow);flex:none;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .15s;
+}
+#refreshBtn:hover{background:var(--ocean-deep)}
+#refreshBtn.busy{opacity:.7;pointer-events:none}
+#refreshBtn svg{transition:transform .6s}
+#refreshBtn.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Attribution nudge left of panel */
+.leaflet-control-attribution{font-size:10px !important;background:rgba(255,255,255,.75) !important}
+.leaflet-bottom.leaflet-right{right:calc(var(--panel-w) + 20px)}
+.leaflet-left .leaflet-control-zoom{margin-top:90px;margin-left:16px;border:none;box-shadow:var(--shadow);border-radius:14px;overflow:hidden}
+.leaflet-control-zoom a{width:44px !important;height:44px !important;line-height:44px !important;color:var(--navy) !important;font-size:20px !important}
+
+/* Pin */
+.hb-pin{filter:drop-shadow(0 4px 6px rgba(11,46,79,.35))}
+
+/* Snappier taps on touch devices (no 300ms delay, no double-tap zoom on controls) */
+.chip,#searchGo,#refreshBtn{touch-action:manipulation}
+
+/* Drag handle only appears in the mobile bottom-sheet layout */
+#sheetHandle{display:none}
+
+@media (max-width:820px){
+  :root{--panel-w:320px}
+}
+
+/* ============================================================
+   Mobile / touchscreen: panel becomes a draggable bottom sheet
+   ============================================================ */
+@media (max-width:640px){
+  :root{--panel-w:0px}
+
+  /* Top bar spans the width and clears the notch */
+  #topbar{
+    left:calc(10px + env(safe-area-inset-left));
+    right:calc(10px + env(safe-area-inset-right));
+    top:calc(10px + env(safe-area-inset-top));
+    gap:10px;
+  }
+  #brand{padding:8px 14px 8px 10px}
+  #brand svg{width:30px;height:30px}
+  #brand .name{font-size:18px}
+  #searchWrap{max-width:none;min-width:160px}
+  #searchBox{min-height:50px}
+
+  /* The panel: pinned to the bottom, slides between peek and full */
+  #panel{
+    top:auto;left:0;right:0;bottom:0;
+    width:100%;max-height:88vh;gap:12px;
+    background:var(--sky);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -12px 34px rgba(11,46,79,.22);
+    padding:0 14px calc(18px + env(safe-area-inset-bottom));
+    overflow:hidden;
+    transform:translateY(52%);
+    transition:transform .34s cubic-bezier(.32,.72,0,1);
+    will-change:transform;
+  }
+  #panel.expanded{overflow-y:auto}
+  #panel.dragging{transition:none}
+
+  /* Grab handle — sticks to the top of the sheet, always reachable */
+  #sheetHandle{
+    display:flex;flex-direction:column;align-items:center;gap:7px;
+    position:sticky;top:0;z-index:6;background:var(--sky);
+    margin:0 -14px;padding:11px 0 8px;
+    cursor:grab;touch-action:none;user-select:none;
+  }
+  #sheetHandle:active{cursor:grabbing}
+  #sheetHandle .bar{width:44px;height:5px;border-radius:99px;background:rgba(11,46,79,.22)}
+  #sheetHandle .hint{
+    font-size:10.5px;font-weight:600;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--navy-60);
+  }
+  #panel.expanded #sheetHandle .hint::after{content:"Drag down to close"}
+  #panel:not(.expanded) #sheetHandle .hint::after{content:"Drag up for details"}
+
+  /* Roomier touch targets */
+  .chip{padding:11px 18px;min-height:44px;font-size:14px}
+  #refreshBtn{min-height:54px}
+  #searchGo{width:44px;height:44px}
+  .leaflet-control-zoom a{width:46px !important;height:46px !important;line-height:46px !important}
+
+  /* Keep map controls clear of the top bar and the sheet */
+  .leaflet-left .leaflet-control-zoom{margin-top:148px}
+  .leaflet-bottom.leaflet-right{right:8px;bottom:calc(48vh + env(safe-area-inset-bottom))}
+}
+
+@media (prefers-reduced-motion:reduce){
+  #dialArrow{transition:none}
+  #panel{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<canvas id="windCanvas"></canvas>
+
+<!-- Top bar -->
+<div id="topbar">
+  <div id="brand">
+    <svg viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="19" fill="#0E6BA8"/>
+      <path d="M20 6 L20 32" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M20 7 C29 12 30 21 21 26 L20 26 Z" fill="#fff"/>
+      <path d="M20 12 C14.5 15 13.5 21 19 25 L20 25 Z" fill="#BFE3F7"/>
+      <path d="M11 32 Q20 37 29 32" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    </svg>
+    <div>
+      <div class="name">Helm<em>Buddy</em></div>
+      <div class="tag">Wind &amp; jib advisor</div>
+      <a class="home" href="../../">← Back to home</a>
+    </div>
+  </div>
+
+  <div id="searchWrap">
+    <svg id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+    </svg>
+    <input id="searchBox" type="text" placeholder="Search a launch point — try “Hastings VIC”" autocomplete="off" enterkeyhint="search">
+    <button id="searchGo" aria-label="Search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <div id="searchStatus"></div>
+  </div>
+</div>
+
+<!-- Side panel (becomes a draggable bottom sheet on mobile) -->
+<div id="panel">
+
+  <div id="sheetHandle" aria-label="Drag to expand or collapse panel" role="button" tabindex="0">
+    <div class="bar"></div>
+    <div class="hint"></div>
+  </div>
+
+  <div class="card" id="boatCard">
+    <div class="card-label">Boat profile</div>
+    <div id="boatChips"></div>
+    <div id="boatMeta"></div>
+  </div>
+
+  <div class="card" id="windCard">
+    <div class="card-label">Wind at start point</div>
+    <div id="windTop" style="margin-top:12px">
+      <div id="dialWrap">
+        <svg id="dial" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="64" fill="#F2F9FE" stroke="#D6E8F4" stroke-width="2"/>
+          <g id="ticks" stroke="#9DBDD3" stroke-width="2"></g>
+          <text x="70" y="20" text-anchor="middle" font-size="13" font-weight="700" fill="#0B2E4F">N</text>
+          <text x="124" y="74" text-anchor="middle" font-size="11" font-weight="600" fill="#5E7E96">E</text>
+          <text x="70" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#5E7E96">S</text>
+          <text x="16" y="74" text-anchor="middle" font-size="11" font-weight="600" fill="#5E7E96">W</text>
+          <g id="dialArrow">
+            <path d="M70 26 L79 66 L70 60 L61 66 Z" fill="#0E6BA8"/>
+            <path d="M70 114 L75 84 L70 88 L65 84 Z" fill="#9DBDD3"/>
+            <circle cx="70" cy="70" r="6" fill="#0B2E4F"/>
+          </g>
+        </svg>
+      </div>
+      <div id="windNums">
+        <div id="windSpeed">—<small>kn</small></div>
+        <div id="windDirTxt">—</div>
+        <div id="windGust">Gusts —</div>
+      </div>
+    </div>
+    <div id="windWhere"><div class="pin-dot"></div><span id="whereTxt">Drop a pin or search to begin</span></div>
+    <div id="dataSrc">Source: —</div>
+  </div>
+
+  <div class="card" id="jibCard">
+    <div id="jibHead">
+      <div id="jibBadge">
+        <svg viewBox="0 0 74 84">
+          <path id="jibSailPath" d="M10 78 C 10 40 22 16 52 6 C 56 30 56 56 50 78 Z" fill="#14A098"/>
+          <rect x="6" y="78" width="56" height="4" rx="2" fill="#0B2E4F"/>
+        </svg>
+        <div class="num" id="jibNum">–</div>
+      </div>
+      <div>
+        <div id="jibTitle">Awaiting wind…</div>
+        <div id="jibSub">Pin a start point and HelmBuddy will size your headsail.</div>
+      </div>
+    </div>
+    <div id="bandStrip">
+      <div class="band-seg" data-b="0"></div><div class="band-seg" data-b="1"></div>
+      <div class="band-seg" data-b="2"></div><div class="band-seg" data-b="3"></div>
+    </div>
+    <div id="bandLabels">
+      <div>J1 light</div><div>J2 working</div><div>J3 heavy</div><div>Stay in</div>
+    </div>
+    <div id="rigRows">
+      <div class="rig-row"><div class="rig-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M12 3l5 4M12 3L7 7"/></svg>
+      </div><div><b>Jib halyard <span class="rig-meter" id="m-hal"><i></i><i></i><i></i><i></i></span></b><p id="t-hal">—</p></div></div>
+      <div class="rig-row"><div class="rig-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3l12 18M18 3v4M18 3h-4"/></svg>
+      </div><div><b>Backstay <span class="rig-meter" id="m-back"><i></i><i></i><i></i><i></i></span></b><p id="t-back">—</p></div></div>
+      <div class="rig-row"><div class="rig-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M17 8l4 4-4 4"/></svg>
+      </div><div><b>Outhaul <span class="rig-meter" id="m-out"><i></i><i></i><i></i><i></i></span></b><p id="t-out">—</p></div></div>
+    </div>
+  </div>
+
+  <div class="card" id="noteCard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B2E4F" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+    <p><b id="noteTitle">Before you cast off</b><span id="noteBody">Recommendations are a guide only — always check the official forecast and your own judgement at the dock.</span></p>
+  </div>
+
+  <button id="refreshBtn">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
+    Refresh wind
+  </button>
+</div>
+
+<script>
+/* =====================================================================
+   HelmBuddy — single-file prototype
+   Map:      Leaflet + OSM base + OpenSeaMap seamark overlay
+   Wind:     Open-Meteo forecast API (free, no key) → live grid
+             Falls back to a simulated field if the API is unreachable
+   Overlay:  Canvas particle streamlines advected through the wind grid
+   ===================================================================== */
+
+/* ---------------- Boat profiles (thresholds in knots) --------------- */
+const PROFILES = [
+  {
+    id:"seaway25", name:"Seaway 25",
+    meta:"7.6 m masthead sloop · moderate displacement. Conservative bands suited to a classic cruiser.",
+    j1:11, j2:17, j3:23,
+    reefHint:"Tuck a reef in the main above ~16 kn to keep her on her feet."
+  },
+  {
+    id:"cruiser30", name:"30 ft cruiser",
+    meta:"Typical 30 ft fractional cruiser. Slightly stiffer — bands shift up a knot or two.",
+    j1:12, j2:18, j3:25,
+    reefHint:"First reef around 18 kn true keeps the helm light."
+  },
+  {
+    id:"cruiser35", name:"35 ft cruiser",
+    meta:"Heavier 35 ft cruiser with more righting moment. Carries sail longer.",
+    j1:14, j2:20, j3:27,
+    reefHint:"First reef around 20 kn true; second at 26 kn."
+  }
+];
+let profile = PROFILES[0];
+
+/* ---------------- Rig tuning matrix per wind band -------------------- */
+const RIG = [
+  { hal:1, back:1, out:1,
+    thal:"Just firm — leave gentle horizontal wrinkles in the luff for power.",
+    tback:"Light. Let the forestay sag a touch for a fuller, draft-forward entry.",
+    tout:"Eased. A full foot gives drive in light air." },
+  { hal:2, back:2, out:2,
+    thal:"Firm. Smooth luff, draft sitting just forward of the middle.",
+    tback:"Moderate — enough to steady the forestay in the chop.",
+    tout:"Medium. Slight depth low in the sail for punch through waves." },
+  { hal:3, back:3, out:3,
+    thal:"Tight. Pull the draft forward and open the leech to depower.",
+    tback:"Firm. Straighten the forestay, flatten the headsail entry.",
+    tout:"Firm. Flatten the lower main and reduce heel." },
+  { hal:4, back:4, out:4,
+    thal:"Maximum. Board-flat entry if you must be out at all.",
+    tback:"Hard on. Blade the rig — and reef the main right down.",
+    tout:"Max. Flat as a board; consider dropping the headsail entirely." }
+];
+
+const BANDS = [
+  { num:"J1", title:"№1 Genoa", color:"#14A098", note:"calm",
+    sub:d=>`Light going (≤ ${d.j1} kn). Fly the big overlapping genoa for maximum area.`,
+    ntit:"Fair conditions", nbody:"A relaxed day for cruising. Watch for wind dying off — carry the iron topsail as backup." },
+  { num:"J2", title:"№2 Working jib", color:"#0E6BA8", note:"",
+    sub:d=>`Working breeze (${d.j1}–${d.j2} kn). The all-rounder — balanced helm, good drive.`,
+    ntit:"Working breeze", nbody:d=>d.reefHint },
+  { num:"J3", title:"№3 Heavy-weather jib", color:"#E8A13C", note:"",
+    sub:d=>`Fresh to strong (${d.j2}–${d.j3} kn). Small, flat headsail well sheeted inboard.`,
+    ntit:"Reef early", nbody:d=>"Strong breeze for a cruiser. " + d.reefHint + " Brief the crew and clip on." },
+  { num:"✕", title:"Stay in harbour", color:"#E1584B", note:"danger",
+    sub:d=>`Above ${d.j3} kn — beyond comfortable cruising limits for this boat.`,
+    ntit:"Not today", nbody:"Conditions exceed this profile's comfort and safety envelope. Enjoy a coffee at the club instead." }
+];
+
+/* ---------------- Map ------------------------------------------------ */
+const START = [-38.35, 145.22]; // Western Port Bay
+const map = L.map('map', { zoomControl:true, attributionControl:true })
+  .setView(START, 11);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:18, attribution:'&copy; OpenStreetMap'
+}).addTo(map);
+
+L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+  maxZoom:18, opacity:.9, attribution:'&copy; OpenSeaMap'
+}).addTo(map);
+
+const pinIcon = L.divIcon({
+  className:'hb-pin', iconSize:[38,48], iconAnchor:[19,46],
+  html:`<svg width="38" height="48" viewBox="0 0 38 48">
+    <path d="M19 2C10 2 3.5 9 3.5 17.5 3.5 29 19 46 19 46s15.5-17 15.5-28.5C34.5 9 28 2 19 2Z" fill="#E1584B" stroke="#fff" stroke-width="2.5"/>
+    <circle cx="19" cy="17.5" r="6" fill="#fff"/></svg>`
+});
+let pin = null;
+let pinPos = L.latLng(START[0], START[1]);
+
+map.on('click', e => setStartPoint(e.latlng, 'Dropped pin'));
+
+/* ---------------- Wind data (Open-Meteo, with simulated fallback) ---- */
+const GRID_N = 5;                 // 5×5 sample grid over the viewport
+let field = null;                 // {lats[], lons[], u[][], v[][]} in kn
+let pointWind = null;             // {speed, gust, dir} at the pin
+let live = false;
+
+function dirToUV(speedKn, dirFromDeg){
+  const r = dirFromDeg * Math.PI/180;
+  return { u:-speedKn*Math.sin(r), v:-speedKn*Math.cos(r) }; // u east+, v north+
+}
+
+async function fetchField(){
+  const b = map.getBounds().pad(0.25);
+  const lats=[], lons=[];
+  for(let i=0;i<GRID_N;i++)for(let j=0;j<GRID_N;j++){
+    lats.push(b.getSouth() + (b.getNorth()-b.getSouth())*i/(GRID_N-1));
+    lons.push(b.getWest()  + (b.getEast()-b.getWest()) *j/(GRID_N-1));
+  }
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats.map(x=>x.toFixed(3)).join(',')}`+
+    `&longitude=${lons.map(x=>x.toFixed(3)).join(',')}`+
+    `&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=auto`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('api');
+  let data = await res.json();
+  if(!Array.isArray(data)) data = [data];
+  const u=[],v=[],spd=[],gst=[],dir=[];
+  data.forEach(d=>{
+    const c=d.current;
+    const w=dirToUV(c.wind_speed_10m, c.wind_direction_10m);
+    u.push(w.u); v.push(w.v);
+    spd.push(c.wind_speed_10m); gst.push(c.wind_gusts_10m); dir.push(c.wind_direction_10m);
+  });
+  field = { b, u, v };
+  live = true;
+  return { spd, gst, dir, lats, lons };
+}
+
+function simulateField(){
+  // Plausible SW'ly with gentle spatial variation — used only if the API is unreachable
+  const b = map.getBounds().pad(0.25);
+  const base = 14 + Math.sin(Date.now()/9e5)*4;
+  const u=[],v=[];
+  for(let i=0;i<GRID_N;i++)for(let j=0;j<GRID_N;j++){
+    const wob = Math.sin(i*1.3+j*0.7)*15;
+    const w = dirToUV(base + Math.cos(i+j)*2, 225 + wob);
+    u.push(w.u); v.push(w.v);
+  }
+  field = { b, u, v };
+  live = false;
+  return { speed: Math.round(base), gust: Math.round(base*1.35), dir: 225 };
+}
+
+function sampleField(lat, lon){
+  if(!field) return {u:0,v:0};
+  const b=field.b;
+  let fy=(lat-b.getSouth())/(b.getNorth()-b.getSouth())*(GRID_N-1);
+  let fx=(lon-b.getWest())/(b.getEast()-b.getWest())*(GRID_N-1);
+  fx=Math.max(0,Math.min(GRID_N-1.001,fx)); fy=Math.max(0,Math.min(GRID_N-1.001,fy));
+  const x0=Math.floor(fx), y0=Math.floor(fy), tx=fx-x0, ty=fy-y0;
+  const idx=(r,c)=>r*GRID_N+c;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const u=lerp(lerp(field.u[idx(y0,x0)],field.u[idx(y0,x0+1)],tx),
+               lerp(field.u[idx(y0+1,x0)],field.u[idx(y0+1,x0+1)],tx),ty);
+  const v=lerp(lerp(field.v[idx(y0,x0)],field.v[idx(y0,x0+1)],tx),
+               lerp(field.v[idx(y0+1,x0)],field.v[idx(y0+1,x0+1)],tx),ty);
+  return {u,v};
+}
+
+async function refreshWind(){
+  const btn=document.getElementById('refreshBtn');
+  btn.classList.add('busy');
+  try{
+    const g = await fetchField();
+    // nearest grid sample to the pin for the readout
+    let best=0,bd=1e9;
+    g.lats.forEach((la,i)=>{
+      const d=(la-pinPos.lat)**2+(g.lons[i]-pinPos.lng)**2;
+      if(d<bd){bd=d;best=i;}
+    });
+    pointWind = { speed:g.spd[best], gust:g.gst[best], dir:g.dir[best] };
+  }catch(e){
+    pointWind = simulateField();
+  }
+  btn.classList.remove('busy');
+  renderReadout();
+  renderRecommendation();
+}
+
+/* ---------------- Particle overlay ----------------------------------- */
+const canvas = document.getElementById('windCanvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+const P_COUNT = 900;
+
+function resizeCanvas(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  canvas.width = innerWidth*dpr; canvas.height = innerHeight*dpr;
+  canvas.style.width = innerWidth+'px'; canvas.style.height = innerHeight+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resizeCanvas();
+addEventListener('resize', resizeCanvas);
+
+function spawn(p){
+  p.x = Math.random()*innerWidth;
+  p.y = Math.random()*innerHeight;
+  p.age = 0;
+  p.life = 60 + Math.random()*120;
+}
+for(let i=0;i<P_COUNT;i++){ const p={}; spawn(p); p.age=Math.random()*100; particles.push(p); }
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let paused = false;
+map.on('movestart zoomstart', ()=>{ paused=true; ctx.clearRect(0,0,innerWidth,innerHeight); });
+map.on('moveend zoomend', ()=>{ paused=false; particles.forEach(spawn); scheduleFieldRefetch(); });
+
+let refetchT=null;
+function scheduleFieldRefetch(){
+  clearTimeout(refetchT);
+  refetchT=setTimeout(()=>{ if(live) fetchField().catch(()=>{}); else simulateField(); }, 900);
+}
+
+function tick(){
+  requestAnimationFrame(tick);
+  if(paused || !field) return;
+
+  // fade previous frame → trails
+  ctx.globalCompositeOperation='destination-in';
+  ctx.fillStyle='rgba(0,0,0,0.93)';
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+  ctx.globalCompositeOperation='source-over';
+
+  const zoomScale = Math.pow(2, map.getZoom()-11) * 0.14;
+
+  for(const p of particles){
+    const ll = map.containerPointToLatLng([p.x,p.y]);
+    const w = sampleField(ll.lat, ll.lng);
+    const spd = Math.hypot(w.u,w.v);
+    const dx =  w.u*zoomScale;
+    const dy = -w.v*zoomScale;
+    const nx = p.x+dx, ny = p.y+dy;
+
+    const a = Math.min(.85, .25 + spd/28);
+    ctx.strokeStyle = spd>22 ? `rgba(225,88,75,${a})`
+                    : spd>14 ? `rgba(14,107,168,${a})`
+                    :          `rgba(20,140,170,${a})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(nx,ny); ctx.stroke();
+
+    p.x=nx; p.y=ny; p.age++;
+    if(p.age>p.life || nx<-20||ny<-20||nx>innerWidth+20||ny>innerHeight+20) spawn(p);
+  }
+}
+if(!reduceMotion) tick();
+
+/* ---------------- Search (Nominatim) --------------------------------- */
+const box=document.getElementById('searchBox');
+const status=document.getElementById('searchStatus');
+function showStatus(t){ status.textContent=t; status.style.display='block'; setTimeout(()=>status.style.display='none', 3200); }
+
+async function doSearch(){
+  const q=box.value.trim();
+  if(!q) return;
+  showStatus('Searching…');
+  try{
+    const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+      { headers:{ 'Accept':'application/json' } });
+    const js=await res.json();
+    if(!js.length){ showStatus('No match — try a nearby town or marina name.'); return; }
+    status.style.display='none';
+    const r=js[0];
+    map.flyTo([+r.lat,+r.lon], Math.max(map.getZoom(),12), {duration:1.1});
+    setStartPoint(L.latLng(+r.lat,+r.lon), r.display_name.split(',').slice(0,2).join(','));
+    box.blur();
+    if(window.__hbExpandSheet) window.__hbExpandSheet();
+  }catch(e){ showStatus('Search unavailable right now — tap the map to drop a pin instead.'); }
+}
+document.getElementById('searchGo').addEventListener('click', doSearch);
+box.addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
+
+/* ---------------- Start point ---------------------------------------- */
+function setStartPoint(latlng, label){
+  pinPos = latlng;
+  if(pin) pin.setLatLng(latlng); else pin = L.marker(latlng,{icon:pinIcon}).addTo(map);
+  document.getElementById('whereTxt').textContent =
+    `${label} · ${latlng.lat.toFixed(3)}°, ${latlng.lng.toFixed(3)}°`;
+  refreshWind();
+}
+
+/* ---------------- Rendering ------------------------------------------ */
+const COMPASS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const cardinal=d=>COMPASS[Math.round(d/22.5)%16];
+
+function renderReadout(){
+  if(!pointWind) return;
+  document.getElementById('windSpeed').innerHTML =
+    `${Math.round(pointWind.speed)}<small>kn</small>`;
+  document.getElementById('windDirTxt').textContent =
+    `${cardinal(pointWind.dir)} · ${Math.round(pointWind.dir)}° true`;
+  document.getElementById('windGust').textContent =
+    `Gusts ${Math.round(pointWind.gust)} kn`;
+  document.getElementById('dialArrow').style.transform = `rotate(${pointWind.dir}deg)`;
+  const src=document.getElementById('dataSrc');
+  src.className = live ? 'live' : 'sim';
+  src.innerHTML = live
+    ? 'Source: <b>Open-Meteo live</b> · 10 m wind, updated just now'
+    : 'Source: <b>Simulated</b> · live feed unreachable, showing demo wind';
+}
+
+function bandIndex(effKn){
+  if(effKn<=profile.j1) return 0;
+  if(effKn<=profile.j2) return 1;
+  if(effKn<=profile.j3) return 2;
+  return 3;
+}
+
+function setMeter(id,n,color){
+  document.querySelectorAll('#'+id+' i').forEach((el,i)=>{
+    el.className = i<n ? 'f' : '';
+  });
+}
+
+function renderRecommendation(){
+  if(!pointWind) return;
+  // Decision wind: blend sustained + gust so a gusty day sizes down
+  const eff = pointWind.speed*0.6 + pointWind.gust*0.4;
+  const bi = bandIndex(eff);
+  const band = BANDS[bi], rig = RIG[bi];
+
+  document.documentElement.style.setProperty('--band-color', band.color);
+  document.getElementById('jibCard').style.setProperty('--band-color', band.color);
+  document.getElementById('jibSailPath').setAttribute('fill', band.color);
+  document.getElementById('jibNum').textContent = band.num;
+  document.getElementById('jibTitle').textContent = band.title;
+  document.getElementById('jibSub').textContent =
+    band.sub(profile) + ` Decision wind ${Math.round(eff)} kn (gust-weighted).`;
+
+  document.querySelectorAll('.band-seg').forEach((el,i)=>el.classList.toggle('on', i===bi));
+
+  document.getElementById('t-hal').textContent = rig.thal;
+  document.getElementById('t-back').textContent = rig.tback;
+  document.getElementById('t-out').textContent = rig.tout;
+  setMeter('m-hal', rig.hal); setMeter('m-back', rig.back); setMeter('m-out', rig.out);
+
+  const note=document.getElementById('noteCard');
+  note.className='card';
+  if(band.note==='calm') note.classList.add('calm');
+  if(band.note==='danger') note.classList.add('danger');
+  note.id='noteCard';
+  document.getElementById('noteTitle').textContent = band.ntit;
+  document.getElementById('noteBody').textContent =
+    ' ' + (typeof band.nbody==='function' ? band.nbody(profile) : band.nbody);
+}
+
+/* ---------------- Boat profile UI ------------------------------------ */
+const chips=document.getElementById('boatChips');
+PROFILES.forEach(p=>{
+  const b=document.createElement('button');
+  b.className='chip'+(p.id===profile.id?' active':'');
+  b.textContent=p.name;
+  b.addEventListener('click',()=>{
+    profile=p;
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('boatMeta').textContent=p.meta;
+    renderRecommendation();
+  });
+  chips.appendChild(b);
+});
+document.getElementById('boatMeta').textContent=profile.meta;
+
+/* ---------------- Dial ticks ------------------------------------------ */
+(function(){
+  const g=document.getElementById('ticks');
+  let s='';
+  for(let a=0;a<360;a+=15){
+    const r=a*Math.PI/180, ro=64, ri=a%45===0?55:60;
+    s+=`<line x1="${70+ri*Math.sin(r)}" y1="${70-ri*Math.cos(r)}" x2="${70+ro*Math.sin(r)}" y2="${70-ro*Math.cos(r)}"/>`;
+  }
+  g.innerHTML=s;
+})();
+
+/* ---------------- Mobile bottom-sheet -------------------------------- */
+(function(){
+  const panel  = document.getElementById('panel');
+  const handle = document.getElementById('sheetHandle');
+  const mq     = matchMedia('(max-width:640px)');
+  let expanded=false, dragging=false, startY=0, startT=0, moved=0, wasDrag=false;
+
+  const collapsedPx = () => Math.round(panel.offsetHeight * 0.52);
+
+  function apply(){
+    if(!mq.matches){ panel.style.transform=''; panel.classList.remove('expanded'); return; }
+    panel.classList.toggle('expanded', expanded);
+    panel.style.transform = `translateY(${expanded ? 0 : collapsedPx()}px)`;
+  }
+  function toggle(){ expanded=!expanded; apply(); }
+
+  function onDown(e){
+    if(!mq.matches) return;
+    dragging=true; moved=0; wasDrag=false; startY=e.clientY;
+    startT = expanded ? 0 : collapsedPx();
+    panel.classList.add('dragging');
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+  }
+  function onMove(e){
+    if(!dragging) return;
+    const d=e.clientY-startY; moved=Math.max(moved,Math.abs(d));
+    if(moved>6) wasDrag=true;
+    const t=Math.max(0, Math.min(collapsedPx(), startT+d));
+    panel.style.transform = `translateY(${t}px)`;
+  }
+  function onUp(e){
+    if(!dragging) return;
+    dragging=false; panel.classList.remove('dragging');
+    if(!wasDrag){ apply(); return; }                 // a still press: let the click handler toggle
+    const t=Math.max(0, Math.min(collapsedPx(), startT+(e.clientY-startY)));
+    expanded = t < collapsedPx()/2;
+    apply();
+  }
+
+  handle.addEventListener('pointerdown', onDown);
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup',   onUp);
+  handle.addEventListener('pointercancel', onUp);
+  handle.addEventListener('click', ()=>{ if(wasDrag){ wasDrag=false; return; } toggle(); });
+  handle.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+
+  const onMq = ()=>{ expanded=false; apply(); };
+  if(mq.addEventListener) mq.addEventListener('change', onMq); else mq.addListener(onMq);
+  addEventListener('resize', apply);
+  apply();
+
+  // Let a fresh search/pin reveal the recommendation without a manual drag
+  window.__hbExpandSheet = ()=>{ if(mq.matches && !expanded){ expanded=true; apply(); } };
+})();
+
+/* ---------------- Boot ------------------------------------------------ */
+document.getElementById('refreshBtn').addEventListener('click', refreshWind);
+setStartPoint(pinPos, 'Western Port Bay');
+setInterval(()=>{ if(live) refreshWind(); }, 10*60*1000); // auto-refresh every 10 min
+</script>
+</body>
+</html>

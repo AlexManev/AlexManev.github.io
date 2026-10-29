@@ -8,6 +8,13 @@
   },
   "apps": [
     {
+      "title": "HelmBuddy",
+      "description": "A wind and jib advisor for sailors: drop a pin or search a launch point to see live wind streamlines on a nautical map, and get the right headsail (J1, J2, J3) plus halyard, backstay and outhaul settings for your boat.",
+      "path": "apps/helmbuddy/",
+      "tags": ["sailing", "wind", "jib", "boat", "weather", "forecast", "map", "nautical", "rig tuning"],
+      "emoji": "⛵"
+    },
+    {
       "title": "Novated Lease Calculator",
       "description": "Enter your salary and car price to see what a novated lease really costs your take-home pay, the tax and GST you save, and how the EV fringe benefits tax exemption and its 2027 changes affect you.",
       "path": "apps/novated-lease-calculator/",
