@@ -8,7 +8,7 @@
 
   /* Must match the ?v= stamp and window.GP_BUILD in index.html. Bump both
      together when any of styles.css, data.js or app.js changes. */
-  const BUILD = '2026-10-19-3';
+  const BUILD = '2026-10-29';
   const KEY = 'garden-planner-v1';
 
   const D = window.GP_DATA;
@@ -55,6 +55,11 @@
       mild: s.mild != null ? s.mild : (preset.mild || 0),       // weeks cool crops grow on into winter
       tree: s.tree != null ? s.tree : (preset.tree || 0),       // fruit-tree shift vs last frost, weeks
       region: s.region != null ? s.region : (preset.region || ''),
+      wx: s.wx !== false,             // live weather & watering advice
+      lat: s.lat != null ? s.lat : (preset.lat != null ? preset.lat : null),
+      lon: s.lon != null ? s.lon : (preset.lon != null ? preset.lon : null),
+      geo: !!s.geo,                   // lat/lon came from the device, not the area
+      watered: s.watered || {},       // watering target id -> ISO date last watered
       beds: beds,                     // {id, name, kind, w, l, rows:[{id, p, m, d, n, v}]}
       trees: (Array.isArray(s.trees) ? s.trees : []).filter((t) => PL[t.p]), // {id, p, v, y, note}
       done: s.done || {},             // task key -> ISO date ticked
@@ -410,6 +415,232 @@
   }
 
   /* =====================================================================
+     Weather & watering — the app's only network call, made only while the
+     weather switch is on. Open-Meteo needs no key; the request carries just
+     the area's coordinates, rounded to about 1 km.
+     ===================================================================== */
+
+  const WX_KEY = 'garden-planner-wx';
+  let WX = null, wxBusy = false, wxFailedAt = 0;
+  try { WX = JSON.parse(localStorage.getItem(WX_KEY)); } catch (e) { WX = null; }
+
+  const wxWanted = () => S.setup && S.wx && S.lat != null && S.lon != null;
+  const sameSpot = () => WX && WX.lat === +S.lat.toFixed(2) && WX.lon === +S.lon.toFixed(2);
+
+  function ensureWx() {
+    if (!wxWanted() || wxBusy || Date.now() - wxFailedAt < 5 * 60 * 1000) return;
+    if (sameSpot() && Date.now() - WX.at < 60 * 60 * 1000 && WX.d.time.indexOf(iso(today())) >= 0) return;
+    const lat = +S.lat.toFixed(2), lon = +S.lon.toFixed(2);
+    wxBusy = true;
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,et0_fao_evapotranspiration' +
+      '&past_days=7&forecast_days=8&timezone=auto')
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then((j) => {
+        if (!j.daily || !Array.isArray(j.daily.time)) throw new Error('No daily data');
+        WX = { at: Date.now(), lat: lat, lon: lon, d: j.daily };
+        try { localStorage.setItem(WX_KEY, JSON.stringify(WX)); } catch (e) { /* cache is optional */ }
+      })
+      .catch(() => { wxFailedAt = Date.now(); })
+      .then(() => { wxBusy = false; if (!UI.sheet) render(); });
+  }
+
+  /* Daily weather around today, or null if we have nothing usable. */
+  function wxDays() {
+    if (!S.wx || !WX || !WX.d || !sameSpot()) return null;
+    const d = WX.d, t = d.time.indexOf(iso(today()));
+    if (t < 0) return null;
+    const num = (a, i) => (a && a[i] != null ? a[i] : null);
+    return {
+      t: t, n: d.time.length,
+      day: (i) => ({
+        date: pd(d.time[i]), code: num(d.weather_code, i), hi: num(d.temperature_2m_max, i), lo: num(d.temperature_2m_min, i),
+        rain: num(d.precipitation_sum, i) || 0, prob: num(d.precipitation_probability_max, i), et0: num(d.et0_fao_evapotranspiration, i) || 0
+      })
+    };
+  }
+
+  function wxLook(code) {
+    if (code == null) return ['·', '—'];
+    if (code === 0) return ['☀️', 'Sunny'];
+    if (code === 1) return ['🌤️', 'Mostly sunny'];
+    if (code === 2) return ['⛅', 'Partly cloudy'];
+    if (code === 3) return ['☁️', 'Cloudy'];
+    if (code === 45 || code === 48) return ['🌫️', 'Fog'];
+    if (code >= 51 && code <= 57) return ['🌦️', 'Drizzle'];
+    if (code >= 61 && code <= 67) return ['🌧️', 'Rain'];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['🌨️', 'Snow'];
+    if (code >= 80 && code <= 82) return ['🌦️', 'Showers'];
+    if (code >= 95) return ['⛈️', 'Storms'];
+    return ['⛅', 'Mixed'];
+  }
+
+  /* Forecast rain, scaled down when a shower is unlikely. Past days count in full. */
+  function expRain(x) { return x.prob != null && x.prob < 50 ? x.rain * x.prob / 100 : x.rain; }
+  /* Light showers mostly wet leaves and evaporate; heavier rain soaks in. */
+  function effRain(mm) { return mm < 2 ? mm * 0.3 : mm * 0.85; }
+
+  /* 0 low, 1 moderate, 2 thirsty — read from each plant's watering note. */
+  function thirst(p) {
+    const w = (p.water || '').toLowerCase();
+    if (/^low/.test(w)) return 0;
+    if (/lots|deep &|moist|critical|never|consistent|rainwater/.test(w)) return 2;
+    return 1;
+  }
+  const KC = [0.55, 0.85, 1.05];  // share of reference evaporation the plants use
+  const RAW = [35, 25, 18];       // mm the soil can lose before it's time to water
+
+  /* Everything that might need water today: active beds and pots, and trees. */
+  function waterTargets() {
+    const t = today(), L = [];
+    S.beds.forEach((b) => {
+      const act = b.rows.map(plan).filter((pl) => pl.start <= t && pl.end >= t);
+      if (!act.length) return;
+      const cls = Math.max.apply(null, act.map((pl) => thirst(pl.p)));
+      const young = act.some((pl) => days(pl.start, t) < 14), pot = b.kind === 'pot';
+      L.push({
+        id: 'b:' + b.id, bedId: b.id, name: b.name, pot: pot, plants: act.map((pl) => pl.p), young: young,
+        kc: KC[cls] * (pot ? 1.5 : 1), raw: young ? 6 : pot ? 15 : RAW[cls], catchRain: pot ? 0.7 : 1,
+        area: pot ? Math.PI * Math.pow(b.w / 200, 2) : b.w * b.l / 10000
+      });
+    });
+    S.trees.forEach((tr) => {
+      const p = PL[tr.p], young = t.getFullYear() - tr.y < 3;
+      L.push({
+        id: 't:' + tr.id, treeId: tr.id, name: p.name + (tr.v ? ' · ' + tr.v : ''), tree: true, plants: [p], young: young,
+        kc: KC[thirst(p)] * (young ? 0.8 : 1), raw: young ? 20 : 35, catchRain: 1, area: young ? 1 : 4
+      });
+    });
+    return L;
+  }
+
+  /* A simple daily soil-water balance: evaporation dries the soil, rain and
+     your own watering fill it up. Unknown history starts half-dry. */
+  function waterAdvice(g, W) {
+    const cap = g.raw * 1.6, lw = S.watered[g.id] ? pd(S.watered[g.id]) : null;
+    const step = (i, D, fc) => {
+      const x = W.day(i);
+      return Math.max(0, Math.min(cap, D + x.et0 * g.kc - effRain(fc ? expRain(x) : x.rain) * g.catchRain));
+    };
+    let D = g.raw * 0.5;
+    for (let i = 0; i < W.t; i++) {
+      if (lw && +W.day(i).date === +lw) D = 0;
+      D = step(i, D, false);
+    }
+    const wateredToday = !!lw && +lw === +W.day(W.t).date;
+    if (wateredToday) D = 0;
+    const start = D, liters = (mm) => Math.max(1, Math.round(mm * g.area));
+    let due = null, d = D;
+    for (let i = W.t; i < W.n; i++) {
+      /* A later day only counts if the rain forecast for it won't do the job. */
+      if (d >= g.raw && (i === W.t || effRain(expRain(W.day(i))) * g.catchRain < d * 0.7)) { due = i; break; }
+      d = step(i, d, true);
+    }
+    const res = { g: g, deficit: start, wateredToday: wateredToday, due: due != null ? W.day(due).date : null };
+    if (wateredToday) res.s = 'done';
+    else if (due === W.t) {
+      /* Due now — unless decent rain is on its way today or tomorrow. */
+      for (let i = W.t; i <= Math.min(W.t + 1, W.n - 1); i++) {
+        const x = W.day(i), r = effRain(expRain(x)) * g.catchRain;
+        if (r >= start * 0.7 && r >= 3) { res.s = 'skip'; res.rainDay = x.date; res.rainMm = Math.round(x.rain); break; }
+      }
+      /* One watering refills the root zone; more just drains away. */
+      if (!res.s) { const mm = Math.min(start, g.raw * 1.2); res.s = 'now'; res.mm = Math.round(mm); res.l = liters(mm); }
+    } else res.s = 'ok';
+    /* Heat ahead dries things out fast; seedlings can't wait. */
+    for (let i = W.t; i < Math.min(W.n, W.t + 4); i++) {
+      const x = W.day(i);
+      if (x.hi != null && x.hi >= 32) { res.hot = x; break; }
+    }
+    return res;
+  }
+
+  function adviceMap() {
+    const W = wxDays(), out = {};
+    if (!W) return out;
+    waterTargets().forEach((g) => { out[g.id] = waterAdvice(g, W); });
+    return out;
+  }
+
+  const dayName = (d) => (days(today(), d) === 0 ? 'today' : days(today(), d) === 1 ? 'tomorrow' : DOW[d.getDay()]);
+
+  function adviceLine(a) {
+    const g = a.g, amt = (l) => '~' + l + ' L' + (g.tree ? ' — a slow, deep soak' : g.pot ? '' : ' (' + Math.round(l / g.area) + ' L/m²)');
+    if (a.s === 'done') return '<b class="w-ok">Watered today ✓</b>' + (a.due ? ' · next ~' + dayName(a.due) : '');
+    if (a.s === 'skip') return '<b class="w-rain">Skip — ' + a.rainMm + ' mm rain due ' + dayName(a.rainDay) + '</b>';
+    if (a.s === 'now') return '<b class="w-now">Water today</b> · ' + amt(a.l) + (g.young && !g.tree ? ' · seedlings: keep the top moist' : '');
+    return '<b class="w-ok">Moist enough</b> · ' + (a.due ? 'next water ~' + dayName(a.due) : 'no watering needed this week') +
+      (a.hot && g.young ? ' · hot ' + dayName(a.hot.date) + ' — check seedlings' : '');
+  }
+
+  /* ------------------------------------------------------------ weather card */
+
+  function weatherCard() {
+    if (!S.wx) return '';
+    ensureWx();
+    const W = wxDays();
+    if (!W) {
+      return '<section class="wx card"><p class="muted wx-msg">' + (wxBusy ? '⏳ Loading the weather…' :
+        S.lat == null ? 'Pick a location in settings to get weather and watering advice.' :
+          '☁️ Couldn\'t load the weather — check your connection. Watering advice will appear once it loads.') + '</p></section>';
+    }
+    const now = W.day(W.t), look = wxLook(now.code);
+    let past = 0, next = 0, max = 1;
+    for (let i = 0; i < W.n; i++) {
+      const x = W.day(i);
+      if (i < W.t) past += x.rain; else if (i < W.t + 7) next += x.rain;
+      max = Math.max(max, x.rain);
+    }
+    let html = '<section class="wx card"><div class="wx-now"><span class="wx-ico">' + look[0] + '</span>' +
+      '<div class="wx-t"><b>' + Math.round(now.hi) + '° <small>/ ' + Math.round(now.lo) + '°</small></b><small>' + look[1] + ' today' +
+      (now.rain >= 0.5 ? ' · ' + now.rain.toFixed(now.rain < 10 ? 1 : 0) + ' mm' + (now.prob != null ? ' (' + now.prob + '%)' : '') : '') + '</small></div>' +
+      '<div class="wx-sum"><small>Last 7 days</small><b>' + Math.round(past) + ' mm</b></div>' +
+      '<div class="wx-sum"><small>Next 7 days</small><b>' + Math.round(next) + ' mm</b></div></div>';
+
+    html += '<div class="wx-strip" id="wxStrip">';
+    for (let i = 0; i < Math.min(W.n, W.t + 8); i++) {
+      const x = W.day(i), lk = wxLook(x.code), h = Math.round(Math.min(1, x.rain / Math.max(10, max)) * 34);
+      html += '<div class="wx-d' + (i < W.t ? ' past' : i === W.t ? ' now' : '') + '" title="' + esc(fmt(x.date) + ': ' + lk[1] + ', ' + x.rain.toFixed(1) + ' mm') + '">' +
+        '<small>' + (i === W.t ? 'Today' : DOW[x.date.getDay()]) + '</small><span>' + lk[0] + '</span><b>' + (x.hi != null ? Math.round(x.hi) + '°' : '') + '</b>' +
+        '<i class="bar"><i style="height:' + h + 'px"></i></i><em>' + (x.rain >= 0.5 ? (x.rain < 10 ? x.rain.toFixed(1) : Math.round(x.rain)) : '0') + '</em></div>';
+    }
+    html += '</div>';
+
+    /* Weather alerts worth acting on in the garden. */
+    const alerts = [];
+    let frost = null, heat = null, deluge = null;
+    for (let i = W.t; i < Math.min(W.n, W.t + 7); i++) {
+      const x = W.day(i);
+      if (!frost && x.lo != null && x.lo <= 2) frost = x;
+      if (!heat && x.hi != null && x.hi >= 32) heat = x;
+      if (!deluge && x.rain >= 20 && (x.prob == null || x.prob >= 50)) deluge = x;
+    }
+    if (frost) alerts.push('❄️ <b>Frost risk ' + dayName(frost.date) + ' night (' + Math.round(frost.lo) + '°)</b> — cover tender seedlings and bring pots under shelter.');
+    if (heat) alerts.push('🔥 <b>Hot ' + dayName(heat.date) + ' (' + Math.round(heat.hi) + '°)</b> — water deeply the evening before, mulch well and shade seedlings.');
+    if (deluge) alerts.push('🌧️ <b>Heavy rain ' + dayName(deluge.date) + ' (' + Math.round(deluge.rain) + ' mm)</b> — hold off feeding and check pots drain.');
+    if (alerts.length) html += '<div class="wx-alerts">' + alerts.map((a) => '<p>' + a + '</p>').join('') + '</div>';
+    const mins = Math.round((Date.now() - WX.at) / 60000);
+    html += '<p class="wx-src">Weather: Open-Meteo · updated ' + (mins < 2 ? 'just now' : mins < 90 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago') + '</p></section>';
+    return html;
+  }
+
+  function wateringSection() {
+    const W = wxDays();
+    if (!W) return '';
+    const adv = adviceMap(), list = Object.keys(adv).map((k) => adv[k]);
+    if (!list.length) return '';
+    const order = { now: 0, skip: 1, ok: 2, done: 3 };
+    list.sort((a, b) => order[a.s] - order[b.s]);
+    const due = list.filter((a) => a.s === 'now').length;
+    return '<h2 class="h2">Watering <small>' + (due ? due + ' to water today' : 'nothing to water today') + '</small></h2><div class="card list">' +
+      list.map((a) => {
+        const g = a.g, lead = g.tree ? av(g.plants[0], 'sm') : '<span class="av sm plain">' + (g.pot ? '🪴' : '🟫') + '</span>';
+        return '<div class="task water ' + a.s + '"><span class="tk-av">' + lead + '</span><span class="tk-txt"><strong>' + esc(g.name) + '</strong><small>' + adviceLine(a) + '</small></span>' +
+          '<button type="button" class="wbtn" data-act="watered" data-id="' + esc(g.id) + '" aria-pressed="' + (a.s === 'done') + '">' + (a.s === 'done' ? 'Undo' : '💧 Watered') + '</button></div>';
+      }).join('') + '</div><p class="muted small pad">Advice balances evaporation and rain (past and forecast) against each plant\'s needs. Tap “Watered” when you water so it knows the soil is topped up.</p>';
+  }
+
+  /* =====================================================================
      Shared bits of markup
      ===================================================================== */
 
@@ -465,6 +696,8 @@
     });
     view.innerHTML = ({ today: viewToday, garden: viewGarden, season: viewSeason, trees: viewTrees, plants: viewPlants })[UI.tab]();
     if (UI.tab === 'season') scrollTimeline();
+    const strip = el('wxStrip'), sn = $('#wxStrip .now');
+    if (strip && sn) strip.scrollLeft = Math.max(0, sn.offsetLeft - strip.clientWidth * 0.35);
     if (UI.tab === 'trees') {
       const w = $('.tcal-wrap'), c = $('.tcal thead th.now');
       if (w && c) w.scrollLeft = Math.max(0, c.offsetLeft - 130 - w.clientWidth * 0.25);
@@ -513,7 +746,7 @@
   function setLoc(id) {
     const l = D.locations.find((x) => x.id === id);
     S.loc = id;
-    if (l) { S.lf = l.lf; S.ff = l.ff; S.mild = l.mild || 0; S.tree = l.tree || 0; S.region = l.region || ''; }
+    if (l) { S.lf = l.lf; S.ff = l.ff; S.mild = l.mild || 0; S.tree = l.tree || 0; S.region = l.region || ''; S.lat = l.lat; S.lon = l.lon; S.geo = false; }
   }
 
   function exampleGarden() {
@@ -569,6 +802,7 @@
     const t = today();
     let html = '<section class="hero"><div class="hero-k">' + seasonName(t) + ' · ' + esc(locName()) + '</div>' +
       '<h1>' + greeting() + '</h1><p>' + frostLine() + '</p></section>';
+    html += weatherCard() + wateringSection();
 
     html += '<div class="seg" role="tablist">' +
       '<button type="button" role="tab" data-act="today-mode" data-mode="upcoming" aria-selected="' + (UI.todayMode === 'upcoming') + '">Upcoming</button>' +
@@ -666,6 +900,8 @@
     }
 
     const beds = S.beds.filter((b) => b.kind !== 'pot'), pots = S.beds.filter((b) => b.kind === 'pot');
+    ensureWx();
+    UI.adv = +mA === +som(today()) ? adviceMap() : null;
     html += '<div class="lawn">';
     beds.forEach((b) => { html += bedCard(b, mA, mB); });
     if (pots.length) html += '<div class="pots">' + pots.map((b) => potCard(b, mA, mB)).join('') + '</div>';
@@ -691,6 +927,15 @@
       av(x.pl.p, 'xs') + esc(x.pl.p.name) + ' · ' + MS[x.pl.start.getMonth()] + (x.pl.start.getFullYear() !== today().getFullYear() ? ' ’' + String(x.pl.start.getFullYear()).slice(2) : '') + '</button>').join('') + '</div>';
   }
 
+  function waterChip(id) {
+    const a = UI.adv && UI.adv[id];
+    if (!a) return '';
+    if (a.s === 'now') return '<span class="wchip now">💧 Water today</span>';
+    if (a.s === 'skip') return '<span class="wchip rain">🌧️ Rain due</span>';
+    if (a.s === 'done') return '<span class="wchip ok">💧 Done</span>';
+    return a.due ? '<span class="wchip ok">💧 ' + (days(today(), a.due) <= 1 ? dayName(a.due) : DOW[a.due.getDay()]) + '</span>' : '';
+  }
+
   function bedCard(b, mA, mB) {
     const sp = splitRows(b, mA, mB);
     const used = sp.act.reduce((s, x) => s + x.pl.p.sp[1], 0), pct = Math.round(used / b.w * 100);
@@ -708,7 +953,7 @@
     });
     if (!sp.act.length) rows = '<p class="bed-empty">Nothing in the ground in ' + ML[mA.getMonth()] + '.</p>';
     return '<article class="bed">' +
-      '<header class="bed-h"><div><strong>' + esc(b.name) + '</strong><small>' + (b.kind === 'ground' ? 'In-ground · ' : '') + b.w + ' × ' + b.l + ' cm</small></div>' +
+      '<header class="bed-h"><div><strong>' + esc(b.name) + '</strong><small>' + (b.kind === 'ground' ? 'In-ground · ' : '') + b.w + ' × ' + b.l + ' cm</small>' + waterChip('b:' + b.id) + '</div>' +
       '<div class="fill" title="Space used in ' + ML[mA.getMonth()] + '"><span style="width:' + Math.min(100, pct) + '%" class="' + (pct > 100 ? 'over' : '') + '"></span></div><b class="pct' + (pct > 100 ? ' over' : '') + '">' + pct + '%</b>' +
       '<button class="round sm" type="button" data-act="edit-bed" data-bed="' + b.id + '" aria-label="Edit ' + esc(b.name) + '">⋯</button></header>' +
       '<div class="bed-in">' + rows + '<button class="add-row" type="button" data-act="add-row" data-bed="' + b.id + '">+ Add plant</button></div>' +
@@ -723,7 +968,7 @@
         (sp.act.length > 1 ? '<i class="pot-more">+' + (sp.act.length - 1) + '</i>' : '') + (count(b, x.r) > 1 ? '<i class="pot-n">' + count(b, x.r) + '×</i>' : '') + '</button>'
       : '<button class="pot-in empty" type="button" data-act="add-row" data-bed="' + b.id + '">+</button>';
     return '<div class="pot"><div class="pot-ring">' + inner + '</div>' +
-      '<button class="pot-name" type="button" data-act="edit-bed" data-bed="' + b.id + '">' + esc(b.name) + ' <small>' + b.w + ' cm</small> ⋯</button></div>';
+      '<button class="pot-name" type="button" data-act="edit-bed" data-bed="' + b.id + '">' + esc(b.name) + ' <small>' + b.w + ' cm</small> ⋯</button>' + waterChip('b:' + b.id) + '</div>';
   }
 
   /* ------------------------------------------------------------ season */
@@ -1190,6 +1435,12 @@
         '<option value="' + w[0] + '"' + (nearestWinter() === w[0] ? ' selected' : '') + '>' + w[1] + '</option>').join('') + '</select></label>' +
       '<p class="hint">Growing season of about ' + len + ' weeks. These two dates drive every date in the app — adjust them if your garden is colder or warmer than the city average. ' +
       'Frost-free? Use the start and end of your main warm growing season. Milder winters let peas, broad beans, garlic, onions and brassicas be sown later into autumn and winter.</p>' +
+      '<h3 class="h3">Weather &amp; watering</h3>' +
+      '<label class="switch"><input type="checkbox" data-field="set-wx"' + (S.wx ? ' checked' : '') + ' /><span>Live weather and watering advice</span></label>' +
+      '<p class="hint">Rain, sun and evaporation for the last 7 and next 7 days come from Open-Meteo (free, no account). Only your ' + (S.geo ? 'location' : 'area') +
+      '\'s coordinates are sent' + (S.lat != null ? ' (' + S.lat.toFixed(2) + ', ' + S.lon.toFixed(2) + ')' : '') + ' — nothing about your garden.</p>' +
+      (S.wx ? '<div class="row2"><button class="btn ghost" type="button" data-act="geo">📍 Use my exact spot</button>' +
+        (S.geo && D.locations.some((l) => l.id === S.loc) ? '<button class="btn ghost" type="button" data-act="geo-reset">Use area centre</button>' : '') + '</div>' : '') +
       '<h3 class="h3">Backup</h3><p class="hint">Your garden is stored only in this browser. Save a backup file to move it to another device.</p>' +
       '<div class="row2"><button class="btn ghost" type="button" data-act="export">⬇︎ Save backup</button><label class="btn ghost file">⬆︎ Restore<input type="file" accept="application/json,.json" data-field="import" hidden /></label></div>' +
       (storageBlocked ? '<p class="bad">This browser is blocking storage, so changes will be lost when you close the page.</p>' : '') +
@@ -1380,6 +1631,26 @@
       toast(PL[removed.p].name + ' removed', () => { S.trees.splice(i, 0, removed); commit(); });
     },
 
+    /* watering */
+    watered: (a) => {
+      const id = a.dataset.id, was = S.watered[id], t = iso(today());
+      if (was === t) delete S.watered[id]; else S.watered[id] = t;
+      save(); render();
+      if (was !== t) toast('Watered ✓', () => { if (was) S.watered[id] = was; else delete S.watered[id]; save(); render(); });
+    },
+    geo: () => {
+      if (!navigator.geolocation) { toast('Location isn\'t available in this browser'); return; }
+      navigator.geolocation.getCurrentPosition((pos) => {
+        S.lat = +pos.coords.latitude.toFixed(2); S.lon = +pos.coords.longitude.toFixed(2); S.geo = true;
+        save(); render(); if (UI.sheet) renderSheet();
+        toast('Using your location for the weather');
+      }, () => toast('Couldn\'t get your location'), { timeout: 15000, maximumAge: 3600000 });
+    },
+    'geo-reset': () => {
+      const l = D.locations.find((x) => x.id === S.loc);
+      if (l) { S.lat = l.lat; S.lon = l.lon; S.geo = false; save(); render(); renderSheet(); }
+    },
+
     /* settings */
     export: () => {
       const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
@@ -1420,7 +1691,8 @@
     },
     'set-lf': (v) => { if (v) { S.lf = v.slice(5); S.loc = 'custom'; return climateChanged(); } },
     'set-ff': (v) => { if (v) { S.ff = v.slice(5); S.loc = 'custom'; return climateChanged(); } },
-    'set-mild': (v) => { S.mild = +v; return climateChanged(); }
+    'set-mild': (v) => { S.mild = +v; return climateChanged(); },
+    'set-wx': (v, t) => { S.wx = t.checked; save(); return true; }
   };
   const treeOf = () => S.trees.find((x) => x.id === UI.sheet.id);
   /* Frost dates move where seasons start, so re-anchor the season views. */
@@ -1452,13 +1724,13 @@
     if (t.id === 'plantQ') { UI.q = t.value; el('plantGrid').innerHTML = plantGrid(); return; }
     if (t.id === 'pickQ') { UI.sheet.q = t.value; el('pickList').innerHTML = pickList(UI.sheet); return; }
     const f = t.dataset && t.dataset.field;
-    if (f && FIELD[f] && t.type !== 'date' && t.tagName !== 'SELECT' && t.type !== 'file' && f !== 'tree-y') FIELD[f](t.value);
+    if (f && FIELD[f] && t.type !== 'date' && t.type !== 'checkbox' && t.tagName !== 'SELECT' && t.type !== 'file' && f !== 'tree-y') FIELD[f](t.value);
   });
 
   document.addEventListener('change', (e) => {
     const t = e.target, f = t.dataset && t.dataset.field;
     if (f === 'import') return importFile(t);
-    if (f && FIELD[f] && FIELD[f](t.value)) {
+    if (f && FIELD[f] && FIELD[f](t.value, t)) {
       if (UI.sheet && UI.sheet.type !== 'row' && UI.sheet.type !== 'task') render();
       if (UI.sheet) renderSheet();
     }

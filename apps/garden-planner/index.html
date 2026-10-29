@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#f4f1ea" />
   <meta name="color-scheme" content="light" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B1%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=2026-10-19-3" />
+  <link rel="stylesheet" href="styles.css?v=2026-10-29" />
 </head>
 <body>
   <header class="top" id="top">
@@ -31,7 +31,9 @@
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!--
-    Plain static, no build step and no network calls at runtime. Split into
+    Plain static, no build step. The only network call is the optional live
+    weather (Open-Meteo, no key; area coordinates only), which can be switched
+    off in settings. Split into
     three files purely for readability:
       styles.css  presentation
       data.js     plants, timings, pruning guides and locations
@@ -43,8 +45,8 @@
     a cached older script. GP_BUILD lets app.js notice a mismatch and offer a
     reload instead of failing silently.
   -->
-  <script>window.GP_BUILD = '2026-10-19-3';</script>
-  <script src="data.js?v=2026-10-19-3"></script>
-  <script src="app.js?v=2026-10-19-3"></script>
+  <script>window.GP_BUILD = '2026-10-29';</script>
+  <script src="data.js?v=2026-10-29"></script>
+  <script src="app.js?v=2026-10-29"></script>
 </body>
 </html>
