@@ -8,6 +8,20 @@
   },
   "apps": [
     {
+      "title": "HelmBuddy",
+      "description": "A wind and jib advisor for sailors: drop a pin or search a launch point to see live wind streamlines on a nautical map, and get the right headsail (J1, J2, J3) plus halyard, backstay and outhaul settings for your boat.",
+      "path": "apps/helmbuddy/",
+      "tags": ["sailing", "wind", "jib", "boat", "weather", "forecast", "map", "nautical", "rig tuning"],
+      "emoji": "⛵"
+    },
+    {
+      "title": "Novated Lease Calculator",
+      "description": "Enter your salary and car price to see what a novated lease really costs your take-home pay, the tax and GST you save, and how the EV fringe benefits tax exemption and its 2027 changes affect you.",
+      "path": "apps/novated-lease-calculator/",
+      "tags": ["finance", "car", "novated lease", "salary packaging", "tax", "ev", "electric vehicle", "fbt", "calculator", "australia"],
+      "emoji": "🚗"
+    },
+    {
       "title": "Garden Planner",
       "description": "Your one-stop veg and fruit garden planner: design beds row by row with companion checks, get sowing, planting and harvest dates for your location, and keep a pruning and care calendar for every fruit tree.",
       "path": "apps/garden-planner/",

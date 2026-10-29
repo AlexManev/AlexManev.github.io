@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novated Lease Calculator</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --line: #e2e6ec;
+      --ink: #14181f;
+      --ink-2: #4a5361;
+      --ink-3: #7a8494;
+      --accent: #0f8a5f;
+      --accent-soft: #e3f4ec;
+      --muted-bar: #b8c0cc;
+      --warn: #a15c00;
+      --warn-soft: #fff3e0;
+      --input: #f7f9fb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1017;
+        --card: #161a22;
+        --line: #262c38;
+        --ink: #e6e9ef;
+        --ink-2: #aab2c0;
+        --ink-3: #7c8595;
+        --accent: #3ccf91;
+        --accent-soft: #13291f;
+        --muted-bar: #4a5262;
+        --warn: #f0b056;
+        --warn-soft: #2a2013;
+        --input: #10141b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    main { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+    a.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    a.back:hover { text-decoration: underline; }
+    h1 { font-size: 1.6rem; margin: 12px 0 4px; }
+    .sub { color: var(--ink-2); margin: 0 0 20px; }
+    h2 { font-size: 1.05rem; margin: 0 0 12px; }
+    .grid { display: grid; gap: 16px; }
+    @media (min-width: 820px) { .grid { grid-template-columns: 360px 1fr; align-items: start; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .stack > * + * { margin-top: 16px; }
+    label { display: block; font-size: 0.85rem; color: var(--ink-2); margin-bottom: 4px; }
+    .field { margin-bottom: 12px; }
+    .field small { display: block; color: var(--ink-3); font-size: 0.75rem; margin-top: 3px; }
+    .money { position: relative; }
+    .money::before {
+      content: "$"; position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--ink-3); pointer-events: none;
+    }
+    .money input { padding-left: 24px; }
+    .pct { position: relative; }
+    .pct::after {
+      content: "%"; position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--ink-3); pointer-events: none;
+    }
+    input, select {
+      width: 100%;
+      font: inherit;
+      font-size: 1rem;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--input);
+      color: var(--ink);
+    }
+    input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    details summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; margin: 4px 0 12px; }
+    .seg { display: flex; background: var(--input); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+    .seg button {
+      flex: 1; border: 0; background: transparent; color: var(--ink-2);
+      font: inherit; font-size: 0.85rem; padding: 6px 4px; border-radius: 999px; cursor: pointer;
+    }
+    .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+
+    .hero { display: grid; gap: 12px; }
+    @media (min-width: 560px) { .hero { grid-template-columns: 1fr 1fr; } }
+    .tile { border-radius: 14px; padding: 14px 16px; border: 1px solid var(--line); }
+    .tile.good { background: var(--accent-soft); border-color: transparent; }
+    .tile .k { font-size: 0.8rem; color: var(--ink-2); }
+    .tile .v { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .tile .n { font-size: 0.8rem; color: var(--ink-3); }
+
+    .badge {
+      display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 3px 10px;
+      border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+    }
+    .badge.warn { background: var(--warn-soft); color: var(--warn); }
+    .fbt-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 0.9rem; color: var(--ink-2); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+    td { padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:last-child { text-align: right; white-space: nowrap; padding-left: 12px; }
+    tr.total td { font-weight: 700; border-bottom: 0; }
+    tr.sub td { color: var(--ink-3); font-size: 0.82rem; }
+    td .hint { display: block; color: var(--ink-3); font-size: 0.75rem; }
+
+    .cmp { display: grid; gap: 10px; }
+    .cmp .bar-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; font-size: 0.85rem; }
+    .cmp .track { position: relative; height: 26px; }
+    .cmp .bar {
+      height: 100%; border-radius: 0 4px 4px 0; min-width: 2px;
+      transition: width 0.3s ease;
+    }
+    .cmp .bar.self { background: var(--muted-bar); }
+    .cmp .bar.lease { background: var(--accent); }
+    .cmp .val { position: absolute; top: 50%; transform: translateY(-50%); margin-left: 8px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cmp .bar-row:hover .bar { filter: brightness(1.08); }
+
+    .notes { font-size: 0.85rem; color: var(--ink-2); }
+    .notes li { margin-bottom: 6px; }
+    .notes h3 { font-size: 0.95rem; margin: 14px 0 6px; color: var(--ink); }
+    .callout {
+      border-left: 3px solid var(--accent); background: var(--accent-soft);
+      padding: 10px 12px; border-radius: 0 10px 10px 0; font-size: 0.85rem; color: var(--ink-2);
+    }
+    .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+    .foot { font-size: 0.75rem; color: var(--ink-3); margin-top: 24px; }
+
+    @media (prefers-reduced-motion: reduce) { .cmp .bar { transition: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="../../">← Back to home</a>
+  <h1>🚗 Novated Lease Calculator</h1>
+  <p class="sub">See what a novated lease really costs your take-home pay, how much tax and GST you save, and how the EV fringe benefits tax exemption changes the picture. Australian 2026–27 rates.</p>
+
+  <div class="grid">
+    <!-- Inputs -->
+    <section class="card" aria-labelledby="in-h">
+      <h2 id="in-h">Your details</h2>
+
+      <div class="field">
+        <label for="salary">Annual salary (before tax, excl. super)</label>
+        <div class="money"><input id="salary" type="number" inputmode="decimal" min="0" step="1000" /></div>
+      </div>
+
+      <div class="field">
+        <label for="price">Car price (incl. GST, excl. on-road costs)</label>
+        <div class="money"><input id="price" type="number" inputmode="decimal" min="0" step="500" /></div>
+        <small>The dealer's vehicle price before stamp duty and rego.</small>
+      </div>
+
+      <div class="field">
+        <label for="type">Vehicle type</label>
+        <select id="type">
+          <option value="ev">Battery electric (BEV) or hydrogen (FCEV)</option>
+          <option value="phev">Plug-in hybrid (PHEV)</option>
+          <option value="ice">Petrol, diesel or regular hybrid</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="start">Lease commitment date</label>
+        <select id="start">
+          <option value="now">On or before 31 March 2027</option>
+          <option value="2027">1 April 2027 – 31 March 2029</option>
+          <option value="2029">From 1 April 2029</option>
+        </select>
+        <small>The EV exemption tightens from 1 April 2027 (see notes below).</small>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="term">Lease term</label>
+          <select id="term">
+            <option value="1">1 year</option>
+            <option value="2">2 years</option>
+            <option value="3">3 years</option>
+            <option value="4">4 years</option>
+            <option value="5">5 years</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rate">Interest rate</label>
+          <div class="pct"><input id="rate" type="number" inputmode="decimal" min="0" max="30" step="0.1" /></div>
+        </div>
+      </div>
+
+      <details>
+        <summary>Running costs &amp; fees (per year)</summary>
+        <div class="field">
+          <label for="onroad">On-road costs (stamp duty, first rego, delivery)</label>
+          <div class="money"><input id="onroad" type="number" inputmode="decimal" min="0" step="100" /></div>
+          <small>One-off, added to the amount financed. In Victoria, stamp duty is roughly 4.2% of the price.</small>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="energy" id="energy-label">Charging</label>
+            <div class="money"><input id="energy" type="number" inputmode="decimal" min="0" step="50" /></div>
+          </div>
+          <div class="field">
+            <label for="service">Servicing &amp; tyres</label>
+            <div class="money"><input id="service" type="number" inputmode="decimal" min="0" step="50" /></div>
+          </div>
+          <div class="field">
+            <label for="insurance">Insurance</label>
+            <div class="money"><input id="insurance" type="number" inputmode="decimal" min="0" step="50" /></div>
+          </div>
+          <div class="field">
+            <label for="rego">Registration</label>
+            <div class="money"><input id="rego" type="number" inputmode="decimal" min="0" step="50" /></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fee">Lease admin fee (per month)</label>
+          <div class="money"><input id="fee" type="number" inputmode="decimal" min="0" step="1" /></div>
+        </div>
+      </details>
+
+      <div class="field" style="margin-top:8px">
+        <label>Show amounts per</label>
+        <div class="seg" id="period" role="group" aria-label="Pay period">
+          <button type="button" data-p="52">Week</button>
+          <button type="button" data-p="26">Fortnight</button>
+          <button type="button" data-p="12">Month</button>
+          <button type="button" data-p="1">Year</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="stack" aria-live="polite">
+      <div class="card">
+        <div class="hero">
+          <div class="tile">
+            <div class="k">Real cost to your take-home pay</div>
+            <div class="v" id="r-cost">–</div>
+            <div class="n" id="r-cost-n"></div>
+          </div>
+          <div class="tile good">
+            <div class="k">You save vs paying from take-home pay</div>
+            <div class="v" id="r-save">–</div>
+            <div class="n" id="r-save-n"></div>
+          </div>
+        </div>
+        <div class="fbt-line" style="margin-top:14px">
+          <span class="badge" id="r-badge">–</span>
+          <span id="r-badge-text"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Your pay, before and after</h2>
+        <table>
+          <tbody id="t-pay"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Where your money goes</h2>
+        <div class="cmp" id="cmp" role="img"></div>
+        <p class="notes" style="margin:12px 0 0">Same car, same running costs. “Paying yourself” means a car loan at the same rate and balloon, plus running costs, all paid from after-tax pay with GST.</p>
+      </div>
+
+      <div class="card">
+        <h2>Summary breakdown</h2>
+        <table>
+          <tbody id="t-break"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Savings over the lease</h2>
+        <table>
+          <tbody id="t-term"></tbody>
+        </table>
+      </div>
+
+      <div class="card notes">
+        <h2>The EV discount, explained</h2>
+        <div class="callout">
+          <strong>Electric Car Discount (FBT exemption).</strong> Battery-electric and hydrogen cars first held and used after 1 July 2022,
+          priced under the luxury car tax threshold for fuel-efficient vehicles (<strong>$91,661</strong> for 2026–27), are exempt from
+          fringe benefits tax. On a petrol car you'd normally make a post-tax payment of 20% of the car's price each year to cover FBT —
+          for an EV that disappears, so the <em>whole</em> lease and every running cost comes out of pre-tax salary.
+        </div>
+        <h3>What changes from 1 April 2027</h3>
+        <ul>
+          <li>Leases committed on or before <strong>31 March 2027</strong> keep the full exemption for the whole lease — existing leases are not affected.</li>
+          <li>From <strong>1 April 2027</strong>, EVs priced at <strong>$75,000 or less</strong> keep the full exemption; EVs over $75,000 (up to the LCT threshold) get a <strong>25% FBT discount</strong> instead.</li>
+          <li>From <strong>1 April 2029</strong>, all eligible EVs move to the 25% discount.</li>
+          <li>Plug-in hybrids lost the exemption from 1 April 2025, unless the lease was committed before then.</li>
+        </ul>
+        <div class="callout warn">These changes were announced with the 2026–27 Budget and are still subject to legislation. This calculator models the 25% discount as reducing the car's taxable value by 25%.</div>
+        <h3>Victoria</h3>
+        <ul>
+          <li>There is no per-kilometre EV road-user charge — Victoria's ZEV charge was struck down by the High Court in 2023.</li>
+          <li>Victoria's $3,000 ZEV purchase subsidy closed in 2023; there is no state EV rebate to add on top.</li>
+          <li>Stamp duty and rego still apply — put them in “On-road costs” and “Registration”.</li>
+        </ul>
+        <h3>Things to know</h3>
+        <ul>
+          <li><strong>Reportable fringe benefits.</strong> Even when exempt, the EV benefit appears on your income statement. It doesn't change your income tax, but it counts towards the Medicare levy surcharge, HELP repayments, Centrelink, child support and some super thresholds.</li>
+          <li><strong>Balloon at the end.</strong> You owe the residual (set by ATO minimums for the term) plus GST when the lease ends — you can pay it, refinance it, or sell the car.</li>
+          <li><strong>Super.</strong> Your employer must still pay super on your pre-packaging salary.</li>
+          <li>Tax uses 2026–27 resident rates (15% / 30% / 37% / 45%), the 2% Medicare levy and the low income tax offset. HELP and the Medicare levy surcharge aren't modelled.</li>
+          <li>GST on the car is credited up to the 2026–27 car limit ($69,883, so at most $6,353). GST on charging/fuel, servicing and insurance is also credited; rego carries none.</li>
+        </ul>
+      </div>
+
+      <p class="foot">An estimate to help you compare, not financial advice. Lease providers' rates, fees and payment timing vary — get a written quote before signing. Your numbers stay on this device.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- 2026–27 parameters ----
+  var LCT_FUEL_EFFICIENT = 91661;   // luxury car tax threshold, fuel-efficient vehicles
+  var EV_FULL_CAP_2027 = 75000;     // full exemption cap from 1 April 2027
+  var GST_CREDIT_CAP = 6353;        // 1/11 of the $69,883 car limit
+  var STATUTORY_RATE = 0.20;        // FBT statutory formula rate
+  var GROSS_UP_TYPE2 = 1.8868;      // reportable fringe benefit gross-up
+  var RESIDUALS = { 1: 0.6563, 2: 0.5625, 3: 0.4688, 4: 0.375, 5: 0.2813 }; // ATO minimum residuals
+  var BRACKETS = [                  // [from, rate]
+    [190000, 0.45], [135000, 0.37], [45000, 0.30], [18200, 0.15]
+  ];
+  var MEDICARE_LOW = 27222;         // single low-income threshold (phase-in)
+
+  var DEFAULTS = {
+    salary: 120000, price: 60000, type: 'ev', start: 'now', term: '3', rate: 7.5,
+    onroad: 4500, energy: 700, service: 500, insurance: 1800, rego: 900, fee: 15, period: 26
+  };
+  var ENERGY_DEFAULT = { ev: 700, phev: 1400, ice: 2600 };
+  var KEY = 'novated-lease-calc:v1';
+
+  function load() {
+    try { var s = JSON.parse(localStorage.getItem(KEY)); if (s) return Object.assign({}, DEFAULTS, s); } catch (e) {}
+    return Object.assign({}, DEFAULTS);
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  var state = load();
+  var $ = function (id) { return document.getElementById(id); };
+  var FIELDS = ['salary', 'price', 'type', 'start', 'term', 'rate', 'onroad', 'energy', 'service', 'insurance', 'rego', 'fee'];
+
+  // ---- Tax ----
+  function incomeTax(t) {
+    var tax = 0, rest = t;
+    for (var i = 0; i < BRACKETS.length; i++) {
+      if (rest > BRACKETS[i][0]) { tax += (rest - BRACKETS[i][0]) * BRACKETS[i][1]; rest = BRACKETS[i][0]; }
+    }
+    var lito = 0;
+    if (t <= 37500) lito = 700;
+    else if (t <= 45000) lito = 700 - 0.05 * (t - 37500);
+    else if (t <= 66667) lito = 325 - 0.015 * (t - 45000);
+    tax = Math.max(0, tax - lito);
+    var medicareHigh = MEDICARE_LOW * 1.25;
+    var medicare = t <= MEDICARE_LOW ? 0 : t <= medicareHigh ? 0.1 * (t - MEDICARE_LOW) : 0.02 * t;
+    return tax + medicare;
+  }
+
+  // ---- FBT treatment ----
+  function fbtTreatment(type, start, price) {
+    if (type === 'ice') return { mode: 'none', badge: 'No FBT exemption', warn: true,
+      text: 'Petrol, diesel and regular hybrids pay FBT — you make a post-tax contribution to cover it.' };
+    if (type === 'phev') return { mode: 'none', badge: 'No FBT exemption', warn: true,
+      text: 'Plug-in hybrids lost the EV exemption for leases committed from 1 April 2025.' };
+    if (price > LCT_FUEL_EFFICIENT) return { mode: 'none', badge: 'Over the EV price cap', warn: true,
+      text: 'Above the $' + LCT_FUEL_EFFICIENT.toLocaleString('en-AU') + ' luxury car tax threshold, EVs get no exemption at all.' };
+    if (start === 'now') return { mode: 'full', badge: 'FBT exempt', warn: false,
+      text: 'Full Electric Car Discount — locked in for the whole lease if committed by 31 March 2027.' };
+    if (start === '2027' && price <= EV_FULL_CAP_2027) return { mode: 'full', badge: 'FBT exempt', warn: false,
+      text: 'At or under $75,000, the full exemption continues to 31 March 2029.' };
+    return { mode: 'discount', badge: '25% FBT discount', warn: true,
+      text: start === '2027'
+        ? 'Over $75,000 from 1 April 2027, EVs get a 25% FBT discount instead of a full exemption.'
+        : 'From 1 April 2029, all eligible EVs get a 25% FBT discount.' };
+  }
+
+  // ---- Loan maths (payments monthly in arrears) ----
+  function annualPayment(principal, balloon, annualRate, years) {
+    var n = years * 12, i = annualRate / 100 / 12;
+    if (n <= 0) return 0;
+    if (i === 0) return (principal - balloon) / years;
+    var pv = principal - balloon / Math.pow(1 + i, n);
+    return pv * i / (1 - Math.pow(1 + i, -n)) * 12;
+  }
+
+  function num(v) { var n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; }
+
+  function calculate(s, forceMode) {
+    var salary = num(s.salary), price = num(s.price), onroad = num(s.onroad);
+    var term = parseInt(s.term, 10) || 3, rate = num(s.rate);
+    var energy = num(s.energy), service = num(s.service), insurance = num(s.insurance), rego = num(s.rego);
+    var feeYear = num(s.fee) * 12;
+
+    var gstCredit = Math.min(price / 11, GST_CREDIT_CAP);
+    var financed = price - gstCredit + onroad;
+    var residual = financed * RESIDUALS[term];
+    var residualInclGst = residual * 1.1;
+
+    var leaseYear = annualPayment(financed, residual, rate, term);           // ex GST
+    var gstable = energy + service + insurance;
+    var runningInc = gstable + rego;
+    var runningEx = gstable * 10 / 11 + rego;
+    var feeEx = feeYear * 10 / 11;
+    var packageEx = leaseYear + runningEx + feeEx;
+
+    var fbt = fbtTreatment(s.type, s.start, price);
+    if (forceMode) fbt = { mode: forceMode };
+    var fullTV = STATUTORY_RATE * price;
+    var taxableValue = fbt.mode === 'full' ? 0 : fbt.mode === 'discount' ? fullTV * 0.75 : fullTV;
+    var postTax = taxableValue;                                               // employee contribution method
+    var preTax = Math.max(0, packageEx - postTax * 10 / 11);
+    var rfba = fbt.mode === 'full' ? fullTV * GROSS_UP_TYPE2 : 0;
+
+    var tax0 = incomeTax(salary);
+    var taxable1 = Math.max(0, salary - preTax);
+    var tax1 = incomeTax(taxable1);
+    var net0 = salary - tax0;
+    var net1 = taxable1 - tax1 - postTax;
+    var cost = net0 - net1;                                                   // real hit to take-home pay
+
+    // Self-funded: loan for the full drive-away price, same rate and balloon, plus running costs incl GST
+    var loanYear = annualPayment(price + onroad, residualInclGst, rate, term);
+    var selfYear = loanYear + runningInc;
+    var saveYear = selfYear - cost;
+
+    // What the EV exemption/discount is worth: the same lease without it, minus this one
+    var evBenefit = fbt.mode !== 'none' && !forceMode ? calculate(s, 'none').cost - cost : 0;
+    return {
+      salary: salary, price: price, onroad: onroad, term: term, fbt: fbt,
+      gstCredit: gstCredit, financed: financed, residualInclGst: residualInclGst, residualPct: RESIDUALS[term],
+      leaseYear: leaseYear, runningEx: runningEx, runningInc: runningInc, feeEx: feeEx, packageEx: packageEx,
+      runningGstSaved: gstable / 11, feeGstSaved: feeYear / 11,
+      preTax: preTax, postTax: postTax, taxSaved: tax0 - tax1, tax0: tax0, tax1: tax1,
+      net0: net0, net1: net1, cost: cost, loanYear: loanYear, selfYear: selfYear, saveYear: saveYear,
+      rfba: rfba, evBenefit: evBenefit
+    };
+  }
+
+  // ---- Rendering ----
+  var AUD = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 });
+  function fmt(v) { return AUD.format(Math.round(v)); }
+  var PERIOD_NAME = { 52: 'week', 26: 'fortnight', 12: 'month', 1: 'year' };
+
+  function row(label, value, opts) {
+    opts = opts || {};
+    var hint = opts.hint ? '<span class="hint">' + opts.hint + '</span>' : '';
+    return '<tr class="' + (opts.cls || '') + '"><td>' + label + hint + '</td><td>' + value + '</td></tr>';
+  }
+
+  function render() {
+    var r = calculate(state);
+    var p = Number(state.period), per = PERIOD_NAME[p];
+    var pp = function (v) { return fmt(v / p); };
+
+    $('r-cost').textContent = pp(r.cost);
+    $('r-cost-n').textContent = 'per ' + per + ' · ' + fmt(r.cost) + ' a year';
+    $('r-save').textContent = pp(Math.max(0, r.saveYear));
+    var pctSave = r.selfYear > 0 ? Math.round(r.saveYear / r.selfYear * 100) : 0;
+    $('r-save-n').textContent = r.saveYear > 0
+      ? 'per ' + per + ' · ' + fmt(r.saveYear * r.term) + ' over ' + r.term + ' yr (' + pctSave + '% cheaper)'
+      : 'No saving at these numbers';
+    var badge = $('r-badge');
+    badge.textContent = r.fbt.badge;
+    badge.className = 'badge' + (r.fbt.warn ? ' warn' : '');
+    $('r-badge-text').textContent = r.fbt.text;
+
+    $('t-pay').innerHTML =
+      row('Gross salary', pp(r.salary)) +
+      row('Pre-tax deduction (lease + running costs)', '− ' + pp(r.preTax)) +
+      row('Taxable salary', pp(r.salary - r.preTax)) +
+      row('Income tax + Medicare', '− ' + pp(r.tax1), { hint: 'was ' + pp(r.tax0) + ' without the lease' }) +
+      (r.postTax > 0 ? row('Post-tax contribution (covers FBT)', '− ' + pp(r.postTax)) : '') +
+      row('Take-home pay with lease', pp(r.net1), { cls: 'total' }) +
+      row('Take-home pay without lease', pp(r.net0), { cls: 'sub' }) +
+      row('Difference — what the car really costs you', pp(r.cost), { cls: 'sub' });
+
+    var max = Math.max(r.selfYear, r.cost, 1);
+    var bars = [
+      { name: 'Paying yourself', v: r.selfYear, cls: 'self' },
+      { name: 'Novated lease', v: r.cost, cls: 'lease' }
+    ];
+    var cmp = $('cmp');
+    cmp.setAttribute('aria-label', bars.map(function (b) { return b.name + ' ' + pp(b.v) + ' per ' + per; }).join(', '));
+    cmp.innerHTML = bars.map(function (b) {
+      var w = Math.max(0, b.v) / max * 70;
+      return '<div class="bar-row" title="' + b.name + ': ' + pp(b.v) + ' per ' + per + '">' +
+        '<span>' + b.name + '</span>' +
+        '<div class="track"><div class="bar ' + b.cls + '" style="width:' + w + '%"></div>' +
+        '<span class="val" style="left:' + w + '%">' + pp(b.v) + '</span></div></div>';
+    }).join('');
+
+    $('t-break').innerHTML =
+      row('Car price (incl. GST)', fmt(r.price)) +
+      row('GST saved on the car', '− ' + fmt(r.gstCredit), { hint: 'Credited by the lessor, capped at ' + fmt(GST_CREDIT_CAP) }) +
+      row('On-road costs', '+ ' + fmt(r.onroad)) +
+      row('Amount financed', fmt(r.financed), { cls: 'total' }) +
+      row('Lease payments', pp(r.leaseYear) + ' /' + per, { hint: 'Ex GST, ' + num(state.rate) + '% over ' + r.term + ' yr' }) +
+      row('Running costs', pp(r.runningEx) + ' /' + per, { hint: 'Ex GST — saves ' + fmt(r.runningGstSaved) + ' a year' }) +
+      row('Admin fees', pp(r.feeEx) + ' /' + per) +
+      row('Total package cost', pp(r.packageEx) + ' /' + per, { cls: 'total' }) +
+      row('Paid from pre-tax salary', pp(r.preTax) + ' /' + per) +
+      row('Paid from post-tax salary', pp(r.postTax) + ' /' + per, { hint: r.postTax > 0 ? 'Employee contribution to remove FBT' : 'Nothing — no FBT to cover' }) +
+      row('Income tax saved', '− ' + pp(r.taxSaved) + ' /' + per) +
+      row('Real cost to take-home pay', pp(r.cost) + ' /' + per, { cls: 'total' });
+
+    var termRows =
+      row('Novated lease, total cost to you', fmt(r.cost * r.term)) +
+      row('Paying yourself, total', fmt(r.selfYear * r.term)) +
+      row('Total saving', fmt(r.saveYear * r.term), { cls: 'total' }) +
+      row('Of which: income tax saved', fmt(r.taxSaved * r.term)) +
+      row('Of which: GST saved on car', fmt(r.gstCredit)) +
+      row('Of which: GST saved on running costs & fees', fmt((r.runningGstSaved + r.feeGstSaved) * r.term)) +
+      row('Less: admin fees & financing differences', '− ' + fmt(Math.max(0,
+        (r.taxSaved + r.runningGstSaved + r.feeGstSaved) * r.term + r.gstCredit - r.saveYear * r.term)));
+    if (r.evBenefit > 0) {
+      termRows += row('EV discount worth', fmt(r.evBenefit * r.term),
+        { hint: 'Extra you would pay for the same car with no FBT exemption (' + fmt(r.evBenefit) + ' a year)' });
+    }
+    termRows += row('Balloon payment at end of lease', fmt(r.residualInclGst),
+      { hint: Math.round(r.residualPct * 1000) / 10 + '% ATO minimum residual + GST — same in both scenarios' });
+    if (r.rfba > 0) {
+      termRows += row('Reportable fringe benefit (per year)', fmt(r.rfba),
+        { hint: 'Shown on your income statement; affects MLS, HELP, Centrelink — not income tax' });
+    }
+    $('t-term').innerHTML = termRows;
+
+    $('energy-label').textContent = state.type === 'ev' ? 'Charging' : 'Fuel / charging';
+    document.querySelectorAll('#period button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.p) === p));
+    });
+  }
+
+  // ---- Wiring ----
+  FIELDS.forEach(function (f) {
+    var el = $(f);
+    el.value = state[f];
+    el.addEventListener('input', function () {
+      if (f === 'type') {
+        var prev = state.type;
+        if (Number(state.energy) === ENERGY_DEFAULT[prev]) { state.energy = ENERGY_DEFAULT[el.value]; $('energy').value = state.energy; }
+      }
+      state[f] = el.value;
+      save();
+      render();
+    });
+  });
+  document.querySelectorAll('#period button').forEach(function (b) {
+    b.addEventListener('click', function () { state.period = Number(b.dataset.p); save(); render(); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
