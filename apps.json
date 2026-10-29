@@ -12,84 +12,96 @@
       "description": "A wind and jib advisor for sailors: drop a pin or search a launch point to see live wind streamlines on a nautical map, and get the right headsail (J1, J2, J3) plus halyard, backstay and outhaul settings for your boat.",
       "path": "apps/helmbuddy/",
       "tags": ["sailing", "wind", "jib", "boat", "weather", "forecast", "map", "nautical", "rig tuning"],
-      "emoji": "⛵"
+      "emoji": "⛵",
+      "hue": 205
     },
     {
       "title": "Novated Lease Calculator",
       "description": "Enter your salary and car price to see what a novated lease really costs your take-home pay, the tax and GST you save, and how the EV fringe benefits tax exemption and its 2027 changes affect you.",
       "path": "apps/novated-lease-calculator/",
       "tags": ["finance", "car", "novated lease", "salary packaging", "tax", "ev", "electric vehicle", "fbt", "calculator", "australia"],
-      "emoji": "🚗"
+      "emoji": "🚗",
+      "hue": 255
     },
     {
       "title": "Garden Planner",
       "description": "Your one-stop veg and fruit garden planner: design beds row by row with companion checks, get sowing, planting and harvest dates for your location, and keep a pruning and care calendar for every fruit tree.",
       "path": "apps/garden-planner/",
       "tags": ["garden", "gardening", "vegetables", "fruit trees", "planting", "pruning", "calendar", "companion planting", "planner", "harvest"],
-      "emoji": "🌱"
+      "emoji": "🌱",
+      "hue": 110
     },
     {
       "title": "Vintage Camera",
       "description": "A film-look camera for your phone: squircle viewfinder, six film stocks, grain, light leaks and an orange date stamp burned into every shot. Photos stay on your device.",
       "path": "apps/vintage-camera/",
       "tags": ["camera", "photo", "vintage", "film", "retro", "date stamp", "filter", "mobile"],
-      "emoji": "📷"
+      "emoji": "📷",
+      "hue": 25
     },
     {
       "title": "Power Tariff Clock",
       "description": "A 24-hour clock dashboard that shows the time and which electricity tariff zone you're in right now — peak, off-peak, shoulder or the free midday window — with rates and a countdown to the next change.",
       "path": "apps/power-clock/",
       "tags": ["clock", "electricity", "energy", "tariff", "power", "dashboard", "time", "peak", "off-peak"],
-      "emoji": "⚡"
+      "emoji": "⚡",
+      "hue": 45
     },
     {
       "title": "Lo-Fi Beat Maker",
       "description": "Plug in your headphones and make chill lo-fi beats: tap a drum grid, pick jazzy chords that always fit, jam on in-key pads, and add vinyl crackle, tape wobble and rain.",
       "path": "apps/lofi-beat-maker/",
       "tags": ["music", "beats", "lofi", "lo-fi", "drums", "sequencer", "chill", "instrument", "creative"],
-      "emoji": "🎧"
+      "emoji": "🎧",
+      "hue": 275
     },
     {
       "title": "Home Workout Ideas",
       "description": "Pick a body part and the exact area you want to hit — upper chest, lats, inner biceps, quads, hamstrings — and get every exercise you can do with a barbell, dumbbells, an adjustable bench or bodyweight.",
       "path": "apps/home-workouts/",
       "tags": ["fitness", "workout", "gym", "exercise", "home gym", "barbell", "dumbbell", "strength", "training"],
-      "emoji": "🏋️"
+      "emoji": "🏋️",
+      "hue": 0
     },
     {
       "title": "Timber Cut Planner",
       "description": "List the timber you have and the pieces you need — it works out which boards to cut for the least offcut, or which lengths to buy, and lets you tick off each cut as you go.",
       "path": "apps/timber-cut-planner/",
       "tags": ["diy", "timber", "wood", "cutting", "carpentry", "offcut", "calculator", "tool"],
-      "emoji": "🪚"
+      "emoji": "🪚",
+      "hue": 160
     },
     {
       "title": "Flight Stopovers",
       "description": "Pick a departure and arrival city and see every city you could connect through — one or two stops — drawn as routes on a world map.",
       "path": "apps/flight-stopovers/",
       "tags": ["travel", "flights", "map", "stopover", "layover", "routes", "airports"],
-      "emoji": "✈️"
+      "emoji": "✈️",
+      "hue": 190
     },
     {
       "title": "Baby's First Year",
       "description": "A week-by-week health and growth plan from birth to one year — feeding schedule and log, appointments, age-appropriate activities, growth charts and every milestone, kept on your device.",
       "path": "apps/baby-first-year/",
       "tags": ["baby", "health", "parenting", "feeding", "growth", "calendar", "milestones", "tracker"],
-      "emoji": "👶"
+      "emoji": "👶",
+      "hue": 330
     },
     {
       "title": "Contraction Timer",
       "description": "A calm, private timer for labour contractions — track length, spacing, and whether a pattern is holding. Everything stays on your device.",
       "path": "apps/contraction-timer/",
       "tags": ["health", "timer", "pwa"],
-      "emoji": "🤰"
+      "emoji": "🤰",
+      "hue": 300
     },
     {
       "title": "Hello World",
       "description": "A minimal example app to show how a subpage is wired up. Copy this folder to start a new one.",
       "path": "apps/hello-world/",
       "tags": ["demo", "example"],
-      "emoji": "👋"
+      "emoji": "👋",
+      "hue": 220
     }
   ]
 }

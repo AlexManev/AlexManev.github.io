@@ -41,13 +41,19 @@ ships a page that nobody can reach from the hub. Always do both.
      "description": "One sentence on what it does and who it's for.",
      "path": "apps/sleep-tracker/",
      "tags": ["health", "tool"],
-     "emoji": "😴"
+     "emoji": "😴",
+     "hue": 240
    }
    ```
 
    - `path` must end in a trailing slash and be relative to the repo root.
-   - `title`, `description`, `tags`, and `emoji` are the only fields the hub
-     renders. `tags` feed the search box, so pick words someone might type.
+   - `title`, `description`, `tags`, `emoji` and `hue` are the only fields the
+     hub reads. `tags` feed the search box, so pick words someone might type;
+     the first tag doubles as the app's category label.
+   - `hue` (0–360) colours the App Store-style icon gradient. Pick one that
+     suits the app and differs from its neighbours; if omitted, a hue is
+     derived from the title. The first three apps also appear as large
+     "Featured" cards.
 
 3. **Add a "Back to home" link** in the app so people can return to the hub.
    Since apps live two levels deep, link to `../../`:
