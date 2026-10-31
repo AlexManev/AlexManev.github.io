@@ -8,7 +8,7 @@
 
   /* Must match the ?v= stamp and window.GP_BUILD in index.html. Bump both
      together when any of styles.css, data.js or app.js changes. */
-  const BUILD = '2026-10-29';
+  const BUILD = '2026-10-31';
   const KEY = 'garden-planner-v1';
 
   const D = window.GP_DATA;
@@ -318,8 +318,21 @@
   }
   const ACT_LABEL = { ind: 'Sow indoors', out: 'Plant out', dir: 'Sow direct' };
 
-  /* Timeline for one row in a bed. */
+  /* Timeline for one planting. Memoised: the grid asks for the same plans
+     many times per render, and they only change with the dates or climate. */
+  const planMemo = new Map();
   function plan(row) {
+    const k = row.p + '|' + row.m + '|' + row.d + '|' + S.lf + '|' + S.ff + '|' + S.mild;
+    let v = planMemo.get(k);
+    if (!v) {
+      if (planMemo.size > 2000) planMemo.clear();
+      v = planRaw(row);
+      planMemo.set(k, v);
+    }
+    return v;
+  }
+
+  function planRaw(row) {
     const p = PL[row.p], st = pd(row.d);
     const r = { p: p, start: st, m: row.m };
     if (row.m === 'indoor' && p.ind) r.sow = addD(st, -p.ind * 7);
@@ -348,14 +361,91 @@
     return out.sort((x, y) => x.a - y.a);
   }
 
-  function autoCount(bed, p) {
+  /* =====================================================================
+     Bed grid — beds are laid out in 30 cm squares, square-foot style.
+     Each planting covers a rectangle g = {x, y, w, h} of squares; columns
+     run across the bed's width, rows along its length. Two plantings may
+     share squares if they're never in the ground at the same time.
+     Pots have no grid.
+     ===================================================================== */
+
+  const CELL = 30;
+  const gridOf = (b) => ({ cols: Math.max(1, Math.round(b.w / CELL)), rows: Math.max(1, Math.round(b.l / CELL)) });
+  /* Big plants need n×n squares each; small ones pack several per square. */
+  const foot = (p) => (p.sp[0] < 60 ? 1 : Math.round(p.sp[0] / 45));
+  function perSquare(p) { const k = Math.floor(CELL / Math.max(p.sp[0], 7.5)); return Math.max(1, k * k); }
+  function gridCount(p, g) {
+    const n = foot(p);
+    return n > 1 ? Math.max(1, Math.floor(g.w / n) * Math.floor(g.h / n)) : perSquare(p) * g.w * g.h;
+  }
+
+  function autoCount(bed, p, g) {
     if (bed.kind === 'pot') {
       const r = bed.w / 2;
       return Math.max(1, Math.floor(Math.PI * r * r / (p.sp[0] * p.sp[0])));
     }
-    return Math.max(1, Math.floor(bed.l / p.sp[0]));
+    const n = foot(p);
+    return gridCount(p, g || { w: n, h: n });
   }
-  const count = (bed, row) => row.n || autoCount(bed, PL[row.p]);
+  const count = (bed, row) => row.n || autoCount(bed, PL[row.p], row.g);
+
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  function sameTime(r1, r2) { const a = plan(r1), b = plan(r2); return a.start <= b.end && b.start <= a.end; }
+
+  function fits(bed, row, g) {
+    const G = gridOf(bed);
+    if (g.x < 0 || g.y < 0 || g.w < 1 || g.h < 1 || g.x + g.w > G.cols || g.y + g.h > G.rows) return false;
+    return !bed.rows.some((o) => o.id !== row.id && o.g && overlaps(o.g, g) && sameTime(o, row));
+  }
+
+  function findSpot(bed, row, w, h, near) {
+    const G = gridOf(bed), spots = [];
+    for (let y = 0; y + h <= G.rows; y++) for (let x = 0; x + w <= G.cols; x++) spots.push({ x: x, y: y, w: w, h: h });
+    if (near) spots.sort((a, b) => (Math.abs(a.x - near.x) + Math.abs(a.y - near.y)) - (Math.abs(b.x - near.x) + Math.abs(b.y - near.y)));
+    return spots.find((g) => fits(bed, row, g)) || null;
+  }
+
+  /* Put a planting where it was asked for, else the nearest free spot, else
+     leave it unplaced (it waits in the bed's tray). Returns where it went. */
+  function place(bed, row, want) {
+    if (bed.kind === 'pot') { delete row.g; return null; }
+    const G = gridOf(bed), n = Math.min(foot(PL[row.p]), G.cols, G.rows);
+    let g = null;
+    if (want) {
+      g = { w: Math.min(G.cols, Math.max(n, want.w || n)), h: Math.min(G.rows, Math.max(n, want.h || n)) };
+      g.x = Math.max(0, Math.min(want.x || 0, G.cols - g.w));
+      g.y = Math.max(0, Math.min(want.y || 0, G.rows - g.h));
+      if (fits(bed, row, g)) { row.g = g; return g; }
+    }
+    const s = findSpot(bed, row, g ? g.w : n, g ? g.h : n, g) || (g ? findSpot(bed, row, n, n, g) : null);
+    if (s) row.g = s; else delete row.g;
+    return s;
+  }
+
+  /* Beds made before the grid had plain rows: lay each out as a strip down
+     the bed, as thick as its old row spacing. Nothing is ever dropped. */
+  function gridLegacy() {
+    let changed = false;
+    S.beds.forEach((b) => {
+      if (b.kind === 'pot' || b.grid) return;
+      const G = gridOf(b), todo = b.rows.filter((r) => !r.g);
+      /* Old beds could be over-full, so shorten the strips until all fit. */
+      for (const frac of [1, 0.5, 0.25]) {
+        todo.forEach((r) => { delete r.g; });
+        let all = true;
+        todo.forEach((r) => {
+          const p = PL[r.p], n = Math.min(foot(p), G.cols, G.rows);
+          const thick = Math.min(G.cols, Math.max(n, Math.round(p.sp[1] / CELL)));
+          const s = findSpot(b, r, thick, Math.max(n, Math.round(G.rows * frac))) || findSpot(b, r, n, n);
+          if (s) r.g = s; else all = false;
+        });
+        if (all) break;
+      }
+      b.grid = true;
+      changed = true;
+    });
+    if (changed) save();
+  }
 
   function relation(a, b) {
     if (!a || !b || a === b) return null;
@@ -751,18 +841,22 @@
 
   function exampleGarden() {
     const t = today(), from = addD(t, -40), y = t.getFullYear();
-    function row(id, m) {
+    function row(id, m, g) {
       const p = PL[id];
       m = m || defMethod(p);
       const d = nextPerfect(p, m, from) || t;
-      return { id: uid(), p: id, m: m, d: iso(d), n: null, v: '' };
+      return { id: uid(), p: id, m: m, d: iso(d), n: null, v: '', g: g };
     }
+    const at = (x, y, w, h) => ({ x: x, y: y, w: w, h: h });
     S.beds = [
-      { id: uid(), name: 'Kitchen bed', kind: 'raised', w: 120, l: 240, rows: [row('lettuce', 'seedling'), row('silverbeet'), row('pea'), row('carrot')] },
-      { id: uid(), name: 'Summer bed', kind: 'raised', w: 150, l: 300, rows: [row('capsicum', 'seedling'), row('basil', 'seedling'), row('bush-bean'), row('marigold', 'seedling')] },
+      { id: uid(), name: 'Kitchen bed', kind: 'raised', w: 120, l: 240, grid: true, rows: [row('lettuce', 'seedling', at(0, 0, 2, 2)), row('silverbeet', null, at(2, 0, 2, 2)),
+        row('carrot', null, at(0, 2, 2, 2)), row('pea', null, at(0, 7, 4, 1))] },
+      { id: uid(), name: 'Summer bed', kind: 'raised', w: 150, l: 300, grid: true, rows: [row('capsicum', 'seedling', at(0, 0, 2, 2)), row('basil', 'seedling', at(2, 0, 1, 2)),
+        row('bush-bean', null, at(3, 0, 2, 2)), row('marigold', 'seedling', at(2, 2, 1, 1))] },
       { id: uid(), name: 'Patio pot', kind: 'pot', w: 40, l: 40, rows: [row('cherry-tomato', 'seedling')] },
       { id: uid(), name: 'Herb pot', kind: 'pot', w: 35, l: 35, rows: [row('mint', 'seedling')] }
     ];
+    S.beds.forEach((b) => b.rows.forEach((r) => { if (!r.g) delete r.g; else place(b, r, r.g); }));
     S.trees = [
       { id: uid(), p: 'lemon', v: 'Eureka', y: y - 3, note: '' },
       { id: uid(), p: 'apple', v: 'Pink Lady', y: y - 2, note: '' },
@@ -884,8 +978,6 @@
 
   /* ------------------------------------------------------------ garden */
 
-  function bandPx(p) { return Math.max(42, Math.min(112, Math.round(p.sp[1] * 1.4))); }
-
   function viewGarden() {
     const months = seasonMonths(UI.season);
     if (!months.some((m) => +m === +UI.month)) UI.month = months[0];
@@ -895,7 +987,7 @@
       (+m === +mA ? ML[m.getMonth()] : MS[m.getMonth()]) + '</button>').join('') + '</div>';
 
     if (!S.beds.length) {
-      return html + empty('🪴', 'Design your first bed', 'Add a raised bed, an in-ground patch or a pot, then fill it with rows of plants. Plant counts, companions and dates are worked out for you.',
+      return html + empty('🪴', 'Design your first bed', 'Add a raised bed, an in-ground patch or a pot, then plant it square by square. Plant counts, companions and dates are worked out for you.',
         '<button class="btn primary" type="button" data-act="new-bed">+ Add a bed or pot</button>');
     }
 
@@ -906,8 +998,8 @@
     beds.forEach((b) => { html += bedCard(b, mA, mB); });
     if (pots.length) html += '<div class="pots">' + pots.map((b) => potCard(b, mA, mB)).join('') + '</div>';
     html += '<button class="add-bed" type="button" data-act="new-bed">+ Add a bed or pot</button></div>';
-    html += '<p class="muted small pad">Showing what is in the ground in ' + ML[mA.getMonth()] + '. Row height follows each plant\'s spacing. ' +
-      '<span class="cmp good inline">♥</span> good neighbours · <span class="cmp bad inline">!</span> keep apart.</p>';
+    html += '<p class="muted small pad">Showing what is in the ground in ' + ML[mA.getMonth()] + '. Each square is 30 cm. Tap an empty square to plant it; ' +
+      'tap a plant to select it, then tap another square to move it. <span class="cmp good inline">♥</span> good neighbours · <span class="cmp bad inline">!</span> keep apart.</p>';
     return html;
   }
 
@@ -937,28 +1029,79 @@
   }
 
   function bedCard(b, mA, mB) {
-    const sp = splitRows(b, mA, mB);
-    const used = sp.act.reduce((s, x) => s + x.pl.p.sp[1], 0), pct = Math.round(used / b.w * 100);
-    let rows = '';
-    sp.act.forEach((x, i) => {
-      const p = x.pl.p, h = bandPx(p), n = count(b, x.r), isz = Math.min(h - 8, 60);
-      if (i > 0) {
-        const rel2 = relation(sp.act[i - 1].pl.p, p);
-        if (rel2) rows += '<div class="gap"><span class="cmp ' + rel2 + '" title="' + esc(sp.act[i - 1].pl.p.name + ' & ' + p.name + (rel2 === 'good' ? ' are good neighbours' : ' should be kept apart')) + '">' + (rel2 === 'good' ? '♥' : '!') + '</span></div>';
+    const sp = splitRows(b, mA, mB), G = gridOf(b), total = G.cols * G.rows;
+    const placed = sp.act.filter((x) => x.r.g), tray = b.rows.filter((r) => !r.g);
+    const used = placed.reduce((n, x) => n + x.r.g.w * x.r.g.h, 0), pct = Math.round(used / total * 100);
+    const sel = UI.sel && UI.sel.bedId === b.id ? b.rows.find((r) => r.id === UI.sel.rowId) : null;
+
+    let grid = '<div class="grid' + (sel ? ' moving' : '') + '" style="--cols:' + G.cols + ';--rows:' + G.rows + '">';
+    for (let y = 0; y < G.rows; y++) {
+      for (let x = 0; x < G.cols; x++) {
+        const free = sel && fits(b, sel, { x: x, y: y, w: 1, h: 1 });
+        grid += '<button type="button" class="sq' + (free ? ' free' : '') + '" style="grid-column:' + (x + 1) + ';grid-row:' + (y + 1) + '" data-act="sq" data-bed="' + b.id +
+          '" data-x="' + x + '" data-y="' + y + '" aria-label="' + (sel ? 'Move here' : 'Plant square') + ' ' + (x + 1) + ', ' + (y + 1) + '"></button>';
       }
-      const growing = x.pl.start > maxD(mA, today()) ? ' <em>from ' + fmt(x.pl.start) + '</em>' : x.pl.ha <= mB && x.pl.hb >= mA ? ' <em class="h">harvest</em>' : '';
-      rows += '<button class="strip" type="button" style="--h:' + h + 'px;--i:' + isz + 'px" data-act="edit-row" data-bed="' + b.id + '" data-row="' + x.r.id + '">' +
-        av(p, 'st') + '<span class="dl"></span><span class="mid"><b>' + n + '×</b><small>' + esc(x.r.v || p.name) + growing + '</small></span><span class="dl"></span>' + av(p, 'st') +
-        (x.pl.fit.s === 'bad' ? '<i class="warn-dot" title="Not the ideal time">!</i>' : '') + '</button>';
-    });
-    if (!sp.act.length) rows = '<p class="bed-empty">Nothing in the ground in ' + ML[mA.getMonth()] + '.</p>';
+    }
+    placed.forEach((x) => { grid += block(b, x.r, x.pl, !!sel && sel.id === x.r.id, mA, mB); });
+
+    /* Hearts and warnings wherever two plantings share an edge. */
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        const A = placed[i], B = placed[j], rel2 = relation(A.pl.p, B.pl.p);
+        if (!rel2) continue;
+        const a = A.r.g, c = B.r.g;
+        const ys = [Math.max(a.y, c.y), Math.min(a.y + a.h, c.y + c.h)], xs = [Math.max(a.x, c.x), Math.min(a.x + a.w, c.x + c.w)];
+        let mx, my;
+        if ((a.x + a.w === c.x || c.x + c.w === a.x) && ys[1] > ys[0]) { mx = a.x + a.w === c.x ? c.x : a.x; my = (ys[0] + ys[1]) / 2; }
+        else if ((a.y + a.h === c.y || c.y + c.h === a.y) && xs[1] > xs[0]) { my = a.y + a.h === c.y ? c.y : a.y; mx = Math.max(xs[0] + 0.5, xs[1] - 0.3); }
+        else continue;
+        grid += '<span class="cmp gb ' + rel2 + '" style="left:' + (mx / G.cols * 100) + '%;top:' + (my / G.rows * 100) + '%" title="' +
+          esc(A.pl.p.name + ' & ' + B.pl.p.name + (rel2 === 'good' ? ' are good neighbours' : ' should be kept apart')) + '">' + (rel2 === 'good' ? '♥' : '!') + '</span>';
+      }
+    }
+    grid += '</div>';
+
     return '<article class="bed">' +
       '<header class="bed-h"><div><strong>' + esc(b.name) + '</strong><small>' + (b.kind === 'ground' ? 'In-ground · ' : '') + b.w + ' × ' + b.l + ' cm</small>' + waterChip('b:' + b.id) + '</div>' +
-      '<div class="fill" title="Space used in ' + ML[mA.getMonth()] + '"><span style="width:' + Math.min(100, pct) + '%" class="' + (pct > 100 ? 'over' : '') + '"></span></div><b class="pct' + (pct > 100 ? ' over' : '') + '">' + pct + '%</b>' +
+      '<div class="fill" title="Squares used in ' + ML[mA.getMonth()] + '"><span style="width:' + Math.min(100, pct) + '%"></span></div><b class="pct">' + pct + '%</b>' +
       '<button class="round sm" type="button" data-act="edit-bed" data-bed="' + b.id + '" aria-label="Edit ' + esc(b.name) + '">⋯</button></header>' +
-      '<div class="bed-in">' + rows + '<button class="add-row" type="button" data-act="add-row" data-bed="' + b.id + '">+ Add plant</button></div>' +
-      (pct > 100 ? '<p class="bed-note">Rows need ' + used + ' cm but the bed is ' + b.w + ' cm wide — remove a row or move one to a later month.</p>' : '') +
-      laterChips(b, sp.later) + '</article>';
+      '<div class="bed-in">' + grid + (sel ? selTool(b, sel) : '') +
+      '<button class="add-row" type="button" data-act="add-row" data-bed="' + b.id + '">+ Add plant</button></div>' +
+      (tray.length ? '<div class="later tray"><span>Not placed yet:</span>' + tray.map((r) => '<button type="button" class="lchip' + (sel && sel.id === r.id ? ' on' : '') + '" data-act="blk" data-bed="' + b.id + '" data-row="' + r.id + '">' +
+        av(PL[r.p], 'xs') + esc(PL[r.p].name) + '</button>').join('') + '</div>' : '') +
+      laterChips(b, sp.later.filter((x) => x.r.g)) + '</article>';
+  }
+
+  function block(b, r, pl, on, mA, mB) {
+    const p = pl.p, q = r.g, n = foot(p), big = n > 1;
+    const cols = big ? Math.max(1, Math.floor(q.w / n)) : q.w, rows = big ? Math.max(1, Math.floor(q.h / n)) : q.h;
+    const k = !big && perSquare(p) >= 4 ? 4 : 1, icon = '<i class="ic">' + glyph(p) + '</i>';
+    let cells = '';
+    for (let i = 0; i < cols * rows; i++) cells += '<span class="bc k' + k + '">' + icon.repeat(k) + '</span>';
+    const status = pl.start > maxD(mA, today()) ? 'from ' + fmt(pl.start) : pl.ha <= mB && pl.hb >= mA ? 'harvest' : '';
+    const nPl = count(b, r);
+    return '<button type="button" class="blk' + (on ? ' on' : '') + '" style="grid-column:' + (q.x + 1) + ' / span ' + q.w + ';grid-row:' + (q.y + 1) + ' / span ' + q.h + '" ' +
+      'data-act="blk" data-bed="' + b.id + '" data-row="' + r.id + '" aria-label="' + esc(p.name + ', ' + nPl + ' plants' + (on ? ', selected' : '')) + '">' +
+      '<span class="bc-grid" style="--c:' + cols + ';--r:' + rows + '">' + cells + '</span>' +
+      '<span class="blk-tag"><b>' + nPl + '×</b>' + (q.w * q.h >= 2 ? ' ' + esc(r.v || p.name) : '') + (status ? ' · <em' + (status === 'harvest' ? ' class="h"' : '') + '>' + status + '</em>' : '') + '</span>' +
+      (pl.fit.s === 'bad' ? '<i class="warn-dot" title="Not the ideal time">!</i>' : '') + '</button>';
+  }
+
+  /* Controls for the selected planting: nudge, resize, edit, remove. */
+  function selTool(b, r) {
+    const p = PL[r.p], q = r.g, n = foot(p), nPl = count(b, r);
+    const btn = (act, attrs, label, aria) => '<button type="button" data-act="' + act + '" ' + attrs + ' aria-label="' + aria + '">' + label + '</button>';
+    return '<div class="seltool"><div class="st-h">' + av(p, 'sm') + '<span><b>' + esc(r.v || p.name) + '</b><small>' +
+      (q ? q.w + ' × ' + q.h + ' square' + (q.w * q.h === 1 ? '' : 's') + ' · ' : 'Not placed yet · ') + nPl + ' plant' + (nPl === 1 ? '' : 's') +
+      (n > 1 ? ' · needs ' + n + '×' + n + ' each' : ' · ' + perSquare(p) + ' per square') + '</small></span>' +
+      '<button class="round sm" type="button" data-act="sel-done" aria-label="Done">✓</button></div>' +
+      '<p class="hint">' + (q ? 'Tap a green square to move it there, or nudge and resize:' : 'Tap a green square to place it.') + '</p>' +
+      (q ? '<div class="st-size"><span>Move</span>' + btn('g-nudge', 'data-dx="-1" data-dy="0"', '←', 'Move left') + btn('g-nudge', 'data-dx="0" data-dy="-1"', '↑', 'Move up') +
+        btn('g-nudge', 'data-dx="0" data-dy="1"', '↓', 'Move down') + btn('g-nudge', 'data-dx="1" data-dy="0"', '→', 'Move right') + '</div>' +
+        '<div class="st-size"><span>Width</span>' + btn('g-size', 'data-d="w" data-v="-' + n + '"', '−', 'Narrower') + '<b>' + q.w + '</b>' + btn('g-size', 'data-d="w" data-v="' + n + '"', '+', 'Wider') +
+        '<span>Length</span>' + btn('g-size', 'data-d="h" data-v="-' + n + '"', '−', 'Shorter') + '<b>' + q.h + '</b>' + btn('g-size', 'data-d="h" data-v="' + n + '"', '+', 'Longer') + '</div>' : '') +
+      '<div class="st-act"><button class="btn sm ghost" type="button" data-act="edit-row" data-bed="' + b.id + '" data-row="' + r.id + '">Dates &amp; details</button>' +
+      '<button class="btn sm ghost danger" type="button" data-act="sel-remove">Remove</button></div></div>';
   }
 
   function potCard(b, mA, mB) {
@@ -1314,22 +1457,23 @@
       '<div><dt><i class="k-y"></i>' + (r.m === 'direct' ? 'Sow in bed' : 'Plant out') + '</dt><dd>' + fmtY(pl.start) + '</dd></div>' +
       '<div><dt><i class="k-g"></i>Harvest</dt><dd>' + fmtY(pl.ha) + ' – ' + fmtY(pl.hb) + '</dd></div></dl></div>';
 
-    const auto = autoCount(b, p);
+    const auto = autoCount(b, p, r.g);
     html += '<div class="row2"><label class="field"><span>Plants</span><input type="number" min="1" max="999" inputmode="numeric" data-field="row-n" value="' + (r.n || '') + '" placeholder="' + auto + '" /></label>' +
       '<label class="field"><span>Variety (optional)</span><input type="text" data-field="row-v" value="' + esc(r.v) + '" placeholder="e.g. ' + esc(sampleVariety(p)) + '" maxlength="40" /></label></div>';
-    html += '<p class="hint">Auto: ' + auto + ' plant' + (auto === 1 ? '' : 's') + (b.kind === 'pot' ? ' in a ' + b.w + ' cm pot' : ' along a ' + b.l + ' cm row') + ' at ' + p.sp[0] + ' cm spacing.</p>';
+    html += '<p class="hint">Auto: ' + auto + ' plant' + (auto === 1 ? '' : 's') + (b.kind === 'pot' ? ' in a ' + b.w + ' cm pot at ' + p.sp[0] + ' cm spacing.' :
+      (r.g ? ' in ' + r.g.w + ' × ' + r.g.h + ' squares' : ' in ' + foot(p) + ' × ' + foot(p) + ' squares') +
+      (foot(p) > 1 ? ' — each plant needs ' + foot(p) + ' × ' + foot(p) + ' squares (30 cm each).' : ' — ' + perSquare(p) + ' per 30 cm square.')) + '</p>';
 
     /* Neighbours in the bed at the same time. */
     const others = b.rows.filter((x) => x.id !== r.id).map((x) => ({ x: x, pl: plan(x) })).filter((o) => o.pl.start <= pl.end && o.pl.end >= pl.start);
     const goods = others.filter((o) => relation(p, o.pl.p) === 'good'), bads = others.filter((o) => relation(p, o.pl.p) === 'bad');
     if (goods.length || bads.length) {
       html += '<div class="card pad-in nbinfo">' + (goods.length ? '<p>💚 Good with ' + goods.map((o) => esc(o.pl.p.name)).join(', ') + ' in this bed.</p>' : '') +
-        (bads.length ? '<p>⛔ ' + bads.map((o) => esc(o.pl.p.name)).join(', ') + (bads.length === 1 ? ' doesn\'t' : ' don\'t') + ' like growing near ' + esc(p.name.toLowerCase()) + ' — keep them at opposite ends.</p>' : '') + '</div>';
+        (bads.length ? '<p>⛔ ' + bads.map((o) => esc(o.pl.p.name)).join(', ') + (bads.length === 1 ? ' doesn\'t' : ' don\'t') + ' like growing near ' + esc(p.name.toLowerCase()) + ' — keep them apart on the grid.</p>' : '') + '</div>';
     }
 
     html += '<div class="sheet-actions"><button class="btn primary" type="button" data-act="row-save">' + (sh.isNew ? 'Add to ' + esc(b.name) : 'Save') + '</button></div>';
     html += '<div class="sheet-links">';
-    if (!sh.isNew && b.rows.length > 1 && b.kind !== 'pot') html += '<button type="button" class="link" data-act="row-move" data-dir="-1">↑ Move up</button><button type="button" class="link" data-act="row-move" data-dir="1">↓ Move down</button>';
     html += '<button type="button" class="link" data-act="plant" data-id="' + p.id + '">📖 Plant guide</button>';
     if (!sh.isNew) html += '<button type="button" class="link danger" data-act="row-delete">Remove</button>';
     return html + '</div>';
@@ -1470,9 +1614,22 @@
 
   function commit() { save(); render(); if (UI.sheet) renderSheet(); }
 
-  function newRow(bedId, pid) {
-    const p = PL[pid], sg = suggest(p, maxD(today(), UI.month || today()));
-    openSheet({ type: 'row', bedId: bedId, isNew: true, draft: { id: uid(), p: pid, m: sg.m, d: iso(sg.d), n: null, v: '' } });
+  function newRow(bedId, pid, at) {
+    const p = PL[pid], sg = suggest(p, maxD(today(), UI.month || today())), n = foot(p);
+    const draft = { id: uid(), p: pid, m: sg.m, d: iso(sg.d), n: null, v: '' };
+    if (at) draft.g = { x: at.x, y: at.y, w: n, h: n };
+    openSheet({ type: 'row', bedId: bedId, isNew: true, draft: draft });
+  }
+
+  const selRow = () => {
+    const b = UI.sel && bedById(UI.sel.bedId), r = b && b.rows.find((x) => x.id === UI.sel.rowId);
+    return r ? { b: b, r: r } : null;
+  };
+
+  function tryG(b, r, g, msg) {
+    if (fits(b, r, g)) { r.g = g; save(); render(); return true; }
+    toast(msg);
+    return false;
   }
 
   function findTask(key) {
@@ -1481,7 +1638,7 @@
   }
 
   const ACT = {
-    tab: (a) => { UI.tab = a.dataset.tab; closeSheet(); render(); window.scrollTo(0, 0); },
+    tab: (a) => { UI.tab = a.dataset.tab; UI.sel = null; closeSheet(); render(); window.scrollTo(0, 0); },
     'close-sheet': () => { closeSheet(); render(); },
     'hard-reload': () => { location.replace(location.pathname + '?r=' + Date.now()); },
 
@@ -1539,6 +1696,10 @@
       d.name = (d.name || '').trim() || (d.kind === 'pot' ? 'Pot' : 'Bed');
       d.w = Math.max(10, Math.min(5000, +d.w || 120));
       d.l = d.kind === 'pot' ? d.w : Math.max(10, Math.min(5000, +d.l || 240));
+      /* Resizing or switching to/from a pot re-homes anything that no longer fits. */
+      if (d.kind === 'pot') d.rows.forEach((r) => { delete r.g; });
+      else d.rows.forEach((r) => { if (!r.g || !fits(d, r, r.g)) place(d, r, r.g); });
+      d.grid = true;
       const i = S.beds.findIndex((x) => x.id === d.id);
       if (i >= 0) S.beds[i] = d; else S.beds.push(d);
       const pending = UI.sheet.pending;
@@ -1551,9 +1712,60 @@
       S.beds = S.beds.filter((x) => x.id !== d.id);
       closeSheet(); commit();
     },
-    'add-row': (a) => openSheet({ type: 'pick', bedId: a.dataset.bed, q: '', cat: 'all' }),
+    'add-row': (a) => { UI.sel = null; openSheet({ type: 'pick', bedId: a.dataset.bed, q: '', cat: 'all' }); },
     'pick-cat': (a) => { UI.sheet.cat = a.dataset.cat; renderSheet(); },
-    pick: (a) => newRow(UI.sheet.bedId, a.dataset.id),
+    pick: (a) => newRow(UI.sheet.bedId, a.dataset.id, UI.sheet.at),
+
+    /* grid */
+    sq: (a) => {
+      const b = bedById(a.dataset.bed), x = +a.dataset.x, y = +a.dataset.y, s2 = selRow();
+      if (s2 && s2.b.id === b.id) {
+        const r = s2.r, n = foot(PL[r.p]), G = gridOf(b), q = r.g || { w: Math.min(n, G.cols), h: Math.min(n, G.rows) };
+        const g = { x: Math.max(0, Math.min(x, G.cols - q.w)), y: Math.max(0, Math.min(y, G.rows - q.h)), w: q.w, h: q.h };
+        tryG(b, r, g, 'Not enough free space there for ' + q.w + ' × ' + q.h + ' squares');
+        return;
+      }
+      UI.sel = null;
+      openSheet({ type: 'pick', bedId: b.id, q: '', cat: 'all', at: { x: x, y: y } });
+    },
+    blk: (a) => {
+      const b = bedById(a.dataset.bed), id = a.dataset.row;
+      if (UI.sel && UI.sel.rowId === id && b.rows.find((x) => x.id === id && x.g)) {
+        const r = b.rows.find((x) => x.id === id);
+        openSheet({ type: 'row', bedId: b.id, draft: Object.assign({}, r) });
+        return;
+      }
+      UI.sel = { bedId: b.id, rowId: id };
+      render();
+    },
+    'sel-done': () => { UI.sel = null; render(); },
+    'g-nudge': (a) => {
+      const s2 = selRow();
+      if (!s2 || !s2.r.g) return;
+      const q = s2.r.g;
+      tryG(s2.b, s2.r, { x: q.x + +a.dataset.dx, y: q.y + +a.dataset.dy, w: q.w, h: q.h }, 'Can\'t move that way — edge of the bed or something\'s there');
+    },
+    'g-size': (a) => {
+      const s2 = selRow();
+      if (!s2 || !s2.r.g) return;
+      const q = s2.r.g, v = +a.dataset.v, n = foot(PL[s2.r.p]), g = Object.assign({}, q);
+      g[a.dataset.d] = Math.max(n, q[a.dataset.d] + v);
+      if (g.w === q.w && g.h === q.h) return;
+      /* Grow right/down if there's room, otherwise left/up. */
+      if (!fits(s2.b, s2.r, g) && v > 0) {
+        const alt = Object.assign({}, g);
+        if (a.dataset.d === 'w') alt.x -= v; else alt.y -= v;
+        if (fits(s2.b, s2.r, alt)) { s2.r.g = alt; save(); render(); return; }
+      }
+      tryG(s2.b, s2.r, g, 'No room to grow it that way');
+    },
+    'sel-remove': () => {
+      const s2 = selRow();
+      if (!s2) return;
+      const b = s2.b, i = b.rows.indexOf(s2.r), removed = b.rows.splice(i, 1)[0];
+      UI.sel = null; save(); render();
+      toast(PL[removed.p].name + ' removed', () => { b.rows.splice(i, 0, removed); save(); render(); });
+    },
     'edit-row': (a) => {
       const b = bedById(a.dataset.bed), r = b && b.rows.find((x) => x.id === a.dataset.row);
       if (r) openSheet({ type: 'row', bedId: b.id, draft: Object.assign({}, r) });
@@ -1574,11 +1786,17 @@
       d.v = (d.v || '').trim();
       const i = b.rows.findIndex((x) => x.id === d.id);
       if (i >= 0) b.rows[i] = d; else b.rows.push(d);
-      /* Jump the garden view to the month the plant goes in, so it's visible. */
+      /* A new date can clash with another planting's squares — find it room. */
+      let note = '';
+      if (b.kind !== 'pot' && (!d.g || !fits(b, d, d.g))) {
+        const asked = d.g, got = place(b, d, asked);
+        if (!got) note = 'No free squares then — it\'s waiting under the bed to be placed';
+        else if (asked && (got.x !== asked.x || got.y !== asked.y)) note = 'Moved to the nearest free squares';
+      }
       const st = som(pd(d.d));
       if (sh.isNew && (st < UI.month || st > eom(UI.month))) { UI.season = seasonOf(st); UI.month = st; }
       closeSheet(); commit();
-      if (sh.isNew) toast(PL[d.p].name + ' added to ' + b.name);
+      if (note) toast(note); else if (sh.isNew) toast(PL[d.p].name + ' added to ' + b.name);
     },
     'row-delete': () => {
       const sh = UI.sheet, b = bedById(sh.bedId), i = b.rows.findIndex((x) => x.id === sh.draft.id);
@@ -1586,13 +1804,6 @@
       const removed = b.rows.splice(i, 1)[0];
       closeSheet(); commit();
       toast(PL[removed.p].name + ' removed', () => { b.rows.splice(i, 0, removed); commit(); });
-    },
-    'row-move': (a) => {
-      const sh = UI.sheet, b = bedById(sh.bedId), i = b.rows.findIndex((x) => x.id === sh.draft.id), j = i + +a.dataset.dir;
-      if (i < 0 || j < 0 || j >= b.rows.length) return;
-      const tmp = b.rows[i]; b.rows[i] = b.rows[j]; b.rows[j] = tmp;
-      save(); render();
-      toast('Moved ' + (+a.dataset.dir < 0 ? 'up' : 'down'));
     },
 
     /* plants */
@@ -1745,7 +1956,7 @@
       try { data = JSON.parse(reader.result); } catch (e) { data = null; }
       if (!data || !Array.isArray(data.beds)) { alert('That file is not a Garden Planner backup.'); return; }
       if (!confirm('Replace everything on this device with the backup from that file?')) return;
-      S = migrate(data); S.setup = true; save();
+      S = migrate(data); S.setup = true; gridLegacy(); save();
       closeSheet(); render();
       toast('Backup restored');
     };
@@ -1774,6 +1985,7 @@
   window.addEventListener('storage', (e) => {
     if (e.key !== KEY) return;
     S = loadState();
+    gridLegacy();
     if (!UI.sheet) render();
   });
 
@@ -1782,6 +1994,7 @@
     if (!document.hidden && !UI.sheet) render();
   });
 
+  gridLegacy();
   render();
   checkBuild();
 })();
